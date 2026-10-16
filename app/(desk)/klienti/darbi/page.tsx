@@ -1,5 +1,5 @@
-import { WorksView } from "@/app/components/works-view";
+import { redirect } from "next/navigation";
 
-export default function ClientWorksPage() {
-  return <WorksView />;
+export default function FormerClientWorksPage() {
+  redirect("/clients/works");
 }

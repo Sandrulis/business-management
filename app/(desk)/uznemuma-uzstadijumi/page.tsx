@@ -1,5 +1,5 @@
-import { CompanySettingsView } from "@/app/components/company-settings-view";
+import { redirect } from "next/navigation";
 
-export default function CompanySettingsPage() {
-  return <CompanySettingsView />;
+export default function FormerCompanySettingsPage() {
+  redirect("/company_settings");
 }

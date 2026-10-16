@@ -1,5 +1,5 @@
-import { InboxView } from "@/app/components/inbox-view";
+import { redirect } from "next/navigation";
 
-export default function InboxPage() {
-  return <InboxView />;
+export default function FormerProcessingPage() {
+  redirect("/incoming_invoices/processing");
 }

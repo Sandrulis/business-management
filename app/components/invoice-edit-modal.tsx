@@ -5,12 +5,12 @@ import { DateField } from "@/app/components/date-field";
 import { EmailFrame } from "@/app/components/email-frame";
 import { InvoicePreviewModal } from "@/app/components/invoice-preview-modal";
 import { useInvoices } from "@/app/components/invoice-state";
+import { RightDrawer } from "@/app/components/right-drawer";
 import { formatFileSize } from "@/app/lib/invoices/files";
 import { formatDate, vatGross, type Invoice } from "@/app/lib/invoices/model";
 import { isValidIban } from "@/app/lib/payments/iban";
-import { FileText, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { FileText } from "lucide-react";
+import { useRef, useState } from "react";
 
 export function InvoiceEditModal({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
   const { notify, saveInvoice, sites, works } = useInvoices();
@@ -25,6 +25,7 @@ export function InvoiceEditModal({ invoice, onClose }: { invoice: Invoice; onClo
   const [saving, setSaving] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [preview, setPreview] = useState(false);
+  const dismissRef = useRef<() => void>(() => {});
   const site = sites.find((entry) => entry.id === objectId) ?? null;
   const work = works.find((entry) => entry.id === workId) ?? null;
   const netValue = parseAmount(net);
@@ -49,19 +50,13 @@ export function InvoiceEditModal({ invoice, onClose }: { invoice: Invoice; onClo
     grossValue >= netValue &&
     dirty;
 
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.key !== "Escape" || preview || confirmClose) return;
-      if (dirty) setConfirmClose(true);
-      else onClose();
+  function blockClose() {
+    if (saving || confirmClose || preview) return false;
+    if (dirty) {
+      setConfirmClose(true);
+      return false;
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [confirmClose, dirty, onClose, preview]);
-
-  function askClose() {
-    if (dirty) setConfirmClose(true);
-    else onClose();
+    return true;
   }
 
   async function save() {
@@ -87,30 +82,31 @@ export function InvoiceEditModal({ invoice, onClose }: { invoice: Invoice; onClo
       return;
     }
     notify("Rēķins saglabāts.", "ok");
-    onClose();
+    dismissRef.current();
   }
 
   const fileSrc = invoice.storagePath ? `/api/invoices/${invoice.id}/file` : "";
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[80] grid place-items-center bg-[#12382c]/35 p-4 backdrop-blur-md"
-      onMouseDown={(event) => {
-        if (event.target !== event.currentTarget || saving || preview || confirmClose) return;
-        askClose();
-      }}
-    >
-      <div role="dialog" aria-modal="true" aria-labelledby="invoice-edit-title" className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white text-[#143028] shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-[#e4efe8] px-5 py-4 sm:px-6">
-          <div>
-            <p className="text-xs font-semibold tracking-[0.14em] text-[#5f756a] uppercase">Labot rēķinu</p>
-            <h2 id="invoice-edit-title" className="mt-1 text-xl font-semibold tracking-tight">{invoice.number}</h2>
-          </div>
-          <button type="button" onClick={askClose} className="grid size-8 place-items-center rounded-lg text-[#5f756a]" aria-label="Aizvērt">
-            <X className="size-4" aria-hidden="true" />
+  return (
+    <RightDrawer
+      wide
+      title="Labot rēķinu"
+      hint={invoice.number}
+      onClose={onClose}
+      beforeClose={blockClose}
+      dismissRef={dismissRef}
+      footer={(close) => (
+        <>
+          <button type="button" onClick={close} disabled={saving} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f] disabled:text-[#5f756a]">
+            Atcelt
           </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-auto px-5 py-5 sm:px-6">
+          <button type="button" onClick={() => void save()} disabled={!canSave} className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]">
+            {saving ? "Saglabā..." : "Saglabāt"}
+          </button>
+        </>
+      )}
+    >
+      <>
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             <Info label="Piegādātājs" value={invoice.supplier} />
             {invoice.fromEmail ? <Info label="No" value={invoice.fromEmail} /> : null}
@@ -207,30 +203,29 @@ export function InvoiceEditModal({ invoice, onClose }: { invoice: Invoice; onClo
               <p className="mt-2 text-sm text-[#5f756a]">Šim rēķinam fails nav saglabāts.</p>
             )}
           </section>
-        </div>
-        <div className="flex justify-end gap-2 border-t border-[#e4efe8] px-5 py-4 sm:px-6">
-          <button type="button" onClick={askClose} disabled={saving} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f] disabled:text-[#5f756a]">
-            Atcelt
-          </button>
-          <button type="button" onClick={() => void save()} disabled={!canSave} className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]">
-            {saving ? "Saglabā..." : "Saglabāt"}
-          </button>
-        </div>
-      </div>
+      </>
       {confirmClose ? (
         <ConfirmModal
           title="Aizvērt bez saglabāšanas?"
           text="Nesaglabātās izmaiņas pazudīs."
           confirmLabel="Aizvērt"
           onCancel={() => setConfirmClose(false)}
-          onConfirm={onClose}
+          onConfirm={() => {
+            setConfirmClose(false);
+            dismissRef.current();
+          }}
         />
       ) : null}
       {preview && fileSrc ? (
-        <InvoicePreviewModal src={fileSrc} name={invoice.fileName || "Rēķins"} mime={invoice.fileMime} onClose={() => setPreview(false)} />
+        <InvoicePreviewModal
+          beside={720}
+          src={fileSrc}
+          name={invoice.fileName || "Rēķins"}
+          mime={invoice.fileMime}
+          onClose={() => setPreview(false)}
+        />
       ) : null}
-    </div>,
-    document.body,
+    </RightDrawer>
   );
 }
 

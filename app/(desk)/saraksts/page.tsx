@@ -1,5 +1,5 @@
-import { ListView } from "@/app/components/list-view";
+import { redirect } from "next/navigation";
 
-export default function ListPage() {
-  return <ListView />;
+export default function FormerListPage() {
+  redirect("/incoming_invoices");
 }

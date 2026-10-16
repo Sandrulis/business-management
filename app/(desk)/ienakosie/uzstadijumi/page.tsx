@@ -1,5 +1,5 @@
-import { IncomingSettingsView } from "@/app/components/incoming-settings-view";
+import { redirect } from "next/navigation";
 
-export default function IncomingSettingsPage() {
-  return <IncomingSettingsView />;
+export default function FormerIncomingSettingsPage() {
+  redirect("/incoming_invoices/settings");
 }

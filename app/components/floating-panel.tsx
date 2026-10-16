@@ -43,8 +43,9 @@ export function FloatingPanel({
     if (stored) {
       setPinned(stored.pinned);
       setCollapsed(stored.collapsed);
-      setPos(clamp(stored.x, stored.y));
-      setSize({ w: stored.w, h: stored.h });
+      const placed = placeInView(stored.x, stored.y, stored.w, stored.h);
+      setPos({ x: placed.x, y: placed.y });
+      setSize({ w: placed.w, h: placed.h });
     }
     setReady(true);
   }, [storageKey]);
@@ -67,11 +68,9 @@ export function FloatingPanel({
     if (pinned) {
       const rect = panelRef.current?.getBoundingClientRect();
       if (rect) {
-        setPos(clamp(rect.left, rect.top));
-        setSize({
-          w: clampSpan(rect.width, MIN_W, window.innerWidth - 16),
-          h: clampSpan(rect.height, MIN_H, window.innerHeight - 16),
-        });
+        const placed = placeInView(rect.left, rect.top, rect.width, rect.height);
+        setPos({ x: placed.x, y: placed.y });
+        setSize({ w: placed.w, h: placed.h });
       }
       setPinned(false);
       lift();
@@ -98,34 +97,32 @@ export function FloatingPanel({
   }
 
   function onResizeDown(event: ReactPointerEvent<HTMLDivElement>) {
+    event.preventDefault();
     event.stopPropagation();
-    resize.current = { x: event.clientX, y: event.clientY, w: size.w, h: size.h, left: pos.x, top: pos.y };
-    event.currentTarget.setPointerCapture(event.pointerId);
+    const start = { x: event.clientX, y: event.clientY, w: size.w, h: size.h, left: pos.x, top: pos.y };
+    resize.current = start;
+    panelRef.current?.classList.add("is-resizing");
+    function move(ev: PointerEvent) {
+      if (ev.pointerId !== event.pointerId) return;
+      const maxW = Math.max(MIN_W, window.innerWidth - 8 - start.left);
+      const maxH = Math.max(MIN_H, window.innerHeight - 8 - start.top);
+      setSize({
+        w: clampSpan(start.w + ev.clientX - start.x, MIN_W, maxW),
+        h: clampSpan(start.h + ev.clientY - start.y, MIN_H, maxH),
+      });
+    }
+    function up(ev: PointerEvent) {
+      if (ev.pointerId !== event.pointerId) return;
+      resize.current = null;
+      panelRef.current?.classList.remove("is-resizing");
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    }
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
     lift();
-  }
-
-  function onResizeMove(event: ReactPointerEvent<HTMLDivElement>) {
-    const start = resize.current;
-    if (!start) return;
-    const margin = 8;
-    let w = Math.max(MIN_W, start.w + event.clientX - start.x);
-    let h = Math.max(MIN_H, start.h + event.clientY - start.y);
-    let left = start.left;
-    let top = start.top;
-    if (left + w > window.innerWidth - margin) {
-      w = Math.min(w, window.innerWidth - margin * 2);
-      left = Math.max(margin, window.innerWidth - margin - w);
-    }
-    if (top + h > window.innerHeight - margin) {
-      h = Math.min(h, window.innerHeight - margin * 2);
-      top = Math.max(margin, window.innerHeight - margin - h);
-    }
-    setPos({ x: left, y: top });
-    setSize({ w: Math.round(w), h: Math.round(h) });
-  }
-
-  function onResizeUp() {
-    resize.current = null;
   }
 
   const panel = (
@@ -134,7 +131,7 @@ export function FloatingPanel({
       className={
         pinned
           ? "mt-4 overflow-hidden rounded-3xl border border-[#d3e4da] bg-white"
-          : "fixed flex flex-col overflow-hidden rounded-3xl border border-[#d3e4da] bg-white shadow-2xl"
+          : "[&.is-resizing_iframe]:pointer-events-none fixed flex flex-col overflow-hidden rounded-3xl border border-[#d3e4da] bg-white shadow-2xl"
       }
       style={pinned ? undefined : { left: pos.x, top: pos.y, width: size.w, height: collapsed ? undefined : size.h, zIndex }}
     >
@@ -176,10 +173,8 @@ export function FloatingPanel({
             role="separator"
             aria-orientation="horizontal"
             aria-label="Mainīt izmēru"
-            className="size-6 cursor-nwse-resize touch-none"
+            className="relative size-8 cursor-nwse-resize touch-none"
             onPointerDown={onResizeDown}
-            onPointerMove={onResizeMove}
-            onPointerUp={onResizeUp}
           >
             <span className="absolute right-1.5 bottom-1.5 size-2.5 border-r-2 border-b-2 border-[#5f756a]" />
           </div>
@@ -210,6 +205,18 @@ function readPanel(storageKey: string): PanelState | null {
   } catch {
     return null;
   }
+}
+
+function placeInView(left: number, top: number, width: number, height: number) {
+  const margin = 8;
+  const w = clampSpan(width, MIN_W, Math.max(MIN_W, window.innerWidth - margin * 2));
+  const h = clampSpan(height, MIN_H, Math.max(MIN_H, window.innerHeight - margin * 2));
+  return {
+    x: Math.min(Math.max(margin, left), Math.max(margin, window.innerWidth - margin - w)),
+    y: Math.min(Math.max(margin, top), Math.max(margin, window.innerHeight - margin - h)),
+    w,
+    h,
+  };
 }
 
 function clampSpan(value: number, min: number, max: number) {

@@ -1,5 +1,5 @@
-import { SitesView } from "@/app/components/sites-view";
+import { redirect } from "next/navigation";
 
-export default function ClientsPage() {
-  return <SitesView />;
+export default function FormerClientsPage() {
+  redirect("/clients");
 }

@@ -1,5 +1,5 @@
-import { UnpaidView } from "@/app/components/unpaid-view";
+import { redirect } from "next/navigation";
 
-export default function UnpaidPage() {
-  return <UnpaidView />;
+export default function FormerUnpaidPage() {
+  redirect("/incoming_invoices/unpaid");
 }

@@ -25,12 +25,19 @@ import { saveCompanySettings } from "@/app/lib/settings/save-settings";
 import {
   createContext,
   useContext,
+  useCallback,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 
 export type NoticeTone = "ok" | "error" | "info";
+
+export type Notice = {
+  id: string;
+  text: string;
+  tone: NoticeTone;
+};
 
 export type Approval = {
   client: string;
@@ -51,8 +58,8 @@ type InvoiceContextValue = {
   setMonth: (month: MonthKey) => void;
   invoices: Invoice[];
   inbox: InboxItem[];
-  notice: { text: string; tone: NoticeTone } | null;
-  dismissNotice: () => void;
+  notices: Notice[];
+  dismissNotice: (id: string) => void;
   notify: (text: string, tone?: NoticeTone) => void;
   approve: (itemId: string, approval: Approval) => Promise<void>;
   saveInvoice: (invoice: Invoice) => Promise<{ ok: true } | { ok: false; message: string }>;
@@ -98,10 +105,14 @@ export function InvoiceProvider({
   const [inbox, setInbox] = useState(initialInbox);
   const [sites, setSites] = useState(initialSites);
   const [works, setWorks] = useState(initialWorks);
-  const [notice, setNotice] = useState<{ text: string; tone: NoticeTone } | null>(
-    initialNotice ? { text: initialNotice, tone: "error" } : null,
+  const [notices, setNotices] = useState<Notice[]>(
+    initialNotice ? [{ id: "initial", text: initialNotice, tone: "error" }] : [],
   );
   const [settings, setSettings] = useState<CompanySettings>(initialSettings);
+
+  const pushNotice = useCallback((text: string, tone: NoticeTone = "info") => {
+    setNotices((current) => [{ id: crypto.randomUUID(), text, tone }, ...current].slice(0, 4));
+  }, []);
 
   const value = useMemo<InvoiceContextValue>(
     () => ({
@@ -112,9 +123,9 @@ export function InvoiceProvider({
       inbox,
       sites,
       works,
-      notice,
-      dismissNotice: () => setNotice(null),
-      notify: (text, tone = "info") => setNotice({ text, tone }),
+      notices,
+      dismissNotice: (id) => setNotices((current) => current.filter((entry) => entry.id !== id)),
+      notify: pushNotice,
       approve: async (itemId, approval) => {
         const item = inbox.find((entry) => entry.id === itemId);
         if (!item) return;
@@ -146,18 +157,18 @@ export function InvoiceProvider({
         if (connected) {
           const supabase = createDataClient();
           if (!supabase) {
-            setNotice({ text: "Datubāze nav pieslēgta.", tone: "error" });
+            pushNotice("Datubāze nav pieslēgta.", "error");
             return;
           }
           const inserted = await insertInvoice(supabase, invoice);
           if (!inserted.id) {
-            setNotice({ text: inserted.error ?? "Rēķinu neizdevās saglabāt.", tone: "error" });
+            pushNotice(inserted.error ?? "Rēķinu neizdevās saglabāt.", "error");
             return;
           }
           const removed = await removeInboxItem(supabase, item.id);
           invoice.id = inserted.id;
           if (removed) {
-            setNotice({ text: removed, tone: "error" });
+            pushNotice(removed, "error");
             return;
           }
         }
@@ -173,7 +184,7 @@ export function InvoiceProvider({
         setInvoices((current) => [invoice, ...current]);
         setInbox((current) => current.filter((entry) => entry.id !== itemId));
         setMonth(monthOf(approval.issuedOn));
-        setNotice({ text: `Rēķins ${approval.number} pievienots sarakstam.`, tone: "ok" });
+        pushNotice(`Rēķins ${approval.number} pievienots sarakstam.`, "ok");
       },
       saveInvoice: async (invoice) => {
         if (!invoice.number.trim() || !invoice.issuedOn || !invoice.dueOn) {
@@ -192,17 +203,17 @@ export function InvoiceProvider({
         if (connected) {
           const supabase = createDataClient();
           if (!supabase) {
-            setNotice({ text: "Datubāze nav pieslēgta.", tone: "error" });
+            pushNotice("Datubāze nav pieslēgta.", "error");
             return { ok: false, message: "Datubāze nav pieslēgta." };
           }
           const error = await setInvoicePaid(supabase, id);
           if (error) {
-            setNotice({ text: error, tone: "error" });
+            pushNotice(error, "error");
             return { ok: false, message: error };
           }
         }
         setInvoices((current) => current.map((entry) => (entry.id === id ? { ...entry, paid: true } : entry)));
-        setNotice({ text: "Rēķins atzīmēts kā apmaksāts.", tone: "ok" });
+        pushNotice("Rēķins atzīmēts kā apmaksāts.", "ok");
         return { ok: true };
       },
       addUpload: async (file) => {
@@ -211,22 +222,22 @@ export function InvoiceProvider({
         const response = await fetch("/api/inbox/upload", { method: "POST", body });
         const payload = (await response.json().catch(() => null)) as { message?: string; item?: InboxItem } | null;
         if (!response.ok || !payload?.item) {
-          setNotice({ text: payload?.message ?? "Failu neizdevās pievienot.", tone: "error" });
+          pushNotice(payload?.message ?? "Failu neizdevās pievienot.", "error");
           return;
         }
         setInbox((current) => [payload.item as InboxItem, ...current]);
-        setNotice({ text: `${file.name} pievienots apstrādei.`, tone: "ok" });
+        pushNotice(`${file.name} pievienots apstrādei.`, "ok");
       },
       discardInbox: async (id) => {
         const response = await fetch(`/api/inbox/${id}`, { method: "DELETE" });
         const payload = (await response.json().catch(() => null)) as { message?: string } | null;
         if (!response.ok) {
           const message = payload?.message ?? "Neizdevās dzēst.";
-          setNotice({ text: message, tone: "error" });
+          pushNotice(message, "error");
           return { ok: false, message };
         }
         setInbox((current) => current.filter((entry) => entry.id !== id));
-        setNotice({ text: "Noņemts no apstrādes.", tone: "ok" });
+        pushNotice("Noņemts no apstrādes.", "ok");
         return { ok: true };
       },
       loadUnreadMail: async () => {
@@ -237,7 +248,7 @@ export function InvoiceProvider({
           updated?: { id: string; bodyText: string }[];
         } | null;
         if (!response.ok || !body) {
-          setNotice({ text: body?.message ?? "E-pastus neizdevās ielādēt.", tone: "error" });
+          pushNotice(body?.message ?? "E-pastus neizdevās ielādēt.", "error");
           return;
         }
         const items = body.items ?? [];
@@ -248,7 +259,7 @@ export function InvoiceProvider({
           const merged = current.map((entry) => (updated.has(entry.id) ? { ...entry, bodyText: updated.get(entry.id) ?? "" } : entry));
           return [...fresh, ...merged];
         });
-        setNotice({ text: body.message ?? "E-pasti ielādēti.", tone: "ok" });
+        pushNotice(body.message ?? "E-pasti ielādēti.", "ok");
       },
       saveSite: async (site) => {
         const iban = normalizeIban(site.iban);
@@ -325,7 +336,7 @@ export function InvoiceProvider({
         return result;
       },
     }),
-    [connected, inbox, invoices, month, notice, settings, sites, today, works],
+    [connected, inbox, invoices, month, notices, pushNotice, settings, sites, today, works],
   );
 
   return <InvoiceContext.Provider value={value}>{children}</InvoiceContext.Provider>;

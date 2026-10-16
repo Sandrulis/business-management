@@ -1,17 +1,25 @@
 "use client";
 
-import { FeedbackToast } from "@/app/components/feedback-toast";
+import { FeedbackToasts } from "@/app/components/feedback-toast";
 import { useInvoices } from "@/app/components/invoice-state";
 import {
   CircleAlert,
+  FileInput,
+  FileOutput,
+  FileText,
+  HardHat,
   Inbox,
   Building2,
   Hammer,
   LayoutDashboard,
   List,
   Menu,
+  Plus,
   ReceiptText,
   Settings,
+  Shirt,
+  Warehouse,
+  Wrench,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -20,44 +28,76 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 const INCOMING = [
-  { href: "/saraksts", label: "Saraksts", icon: List },
-  { href: "/neapmaksatie", label: "Neapmaksātie", icon: CircleAlert },
-  { href: "/apstradei", label: "Apstrādei", icon: Inbox },
+  { href: "/incoming_invoices", label: "Saraksts", icon: List, exact: true },
+  { href: "/incoming_invoices/unpaid", label: "Neapmaksātie", icon: CircleAlert },
+  { href: "/incoming_invoices/processing", label: "Apstrādei", icon: Inbox },
 ];
 
-const INCOMING_SETTINGS = { href: "/ienakosie/uzstadijumi", label: "Uzstādījumi", icon: Settings };
+const INCOMING_SETTINGS = { href: "/incoming_invoices/settings", label: "Uzstādījumi", icon: Settings };
+
+const OUTGOING = [
+  { href: "/outgoing_invoices", label: "Saraksts", icon: List, exact: true },
+  { href: "/outgoing_invoices/new", label: "Izveidot", icon: Plus },
+];
 
 const CLIENTS = [
-  { href: "/klienti", label: "Saraksts", icon: List },
-  { href: "/klienti/darbi", label: "Darbi", icon: Hammer },
+  { href: "/clients", label: "Saraksts", icon: List, exact: true },
+  { href: "/clients/works", label: "Darbi", icon: Hammer },
+  { href: "/clients/offers", label: "Piedāvājumi", icon: FileText },
 ];
 
-const SETTINGS = { href: "/uznemuma-uzstadijumi", label: "Uzņēmuma uzstādījumi", icon: Settings };
+const CATALOG = [
+  { href: "/warehouse", label: "Noliktava", icon: Warehouse },
+  { href: "/employees", label: "Darbinieki", icon: HardHat },
+  { href: "/tools", label: "Instrumenti", icon: Wrench },
+  { href: "/clothing", label: "Apģērbs", icon: Shirt },
+];
+
+function catalogLinks(href: string) {
+  return [
+    { href, label: "Saraksts", icon: List, exact: true },
+    { href: `${href}/new`, label: "Pievienot", icon: Plus },
+  ];
+}
+
+const SETTINGS = { href: "/company_settings", label: "Uzņēmuma uzstādījumi", icon: Settings };
+
+function navActive(pathname: string, href: string, exact = false) {
+  return exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { invoices, inbox, notice, dismissNotice } = useInvoices();
+  const { invoices, inbox, notices, dismissNotice } = useInvoices();
   const [open, setOpen] = useState(false);
   const unpaid = invoices.filter((invoice) => !invoice.paid).length;
-  const sectionSettingsActive = pathname.startsWith(INCOMING_SETTINGS.href);
-  const incomingActive = INCOMING.some((item) => pathname.startsWith(item.href)) || sectionSettingsActive;
-  const clientsActive = pathname === "/klienti" || pathname.startsWith("/klienti/");
-  const current = INCOMING.find((item) => pathname.startsWith(item.href));
-  const clientCurrent = CLIENTS.find((item) => (item.href === "/klienti" ? pathname === "/klienti" : pathname.startsWith(item.href)));
+  const sectionSettingsActive = navActive(pathname, INCOMING_SETTINGS.href);
+  const incomingActive = pathname === "/incoming_invoices" || pathname.startsWith("/incoming_invoices/");
+  const outgoingActive = pathname === "/outgoing_invoices" || pathname.startsWith("/outgoing_invoices/");
+  const clientsActive = pathname === "/clients" || pathname.startsWith("/clients/");
+  const catalogSection = CATALOG.find((item) => navActive(pathname, item.href));
+  const catalogCurrent = catalogSection
+    ? catalogLinks(catalogSection.href).find((item) => navActive(pathname, item.href, item.exact))
+    : undefined;
+  const current = INCOMING.find((item) => navActive(pathname, item.href, item.exact));
+  const outgoingCurrent = OUTGOING.find((item) => navActive(pathname, item.href, item.exact));
+  const clientCurrent = CLIENTS.find((item) => navActive(pathname, item.href, item.exact));
   const title =
+    catalogCurrent?.label ??
+    outgoingCurrent?.label ??
     current?.label ??
-    (pathname === "/klienti" ? "Klienti" : clientCurrent?.label) ??
+    (pathname === "/clients" ? "Klienti" : clientCurrent?.label) ??
     (sectionSettingsActive
       ? INCOMING_SETTINGS.label
-      : pathname.startsWith(SETTINGS.href)
+      : navActive(pathname, SETTINGS.href)
         ? SETTINGS.label
         : pathname === "/"
           ? "Sākums"
           : "Uzņēmuma vadība");
 
   function countFor(href: string) {
-    if (href === "/neapmaksatie") return unpaid;
-    if (href === "/apstradei") return inbox.length;
+    if (href === "/incoming_invoices/unpaid") return unpaid;
+    if (href === "/incoming_invoices/processing") return inbox.length;
     return 0;
   }
 
@@ -68,7 +108,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div
       className={`min-h-screen bg-[#eef5f0] text-[#143028] lg:grid ${
-        incomingActive || clientsActive ? "lg:grid-cols-[240px_232px_minmax(0,1fr)]" : "lg:grid-cols-[240px_minmax(0,1fr)]"
+        incomingActive || outgoingActive || clientsActive || catalogSection ? "lg:grid-cols-[240px_232px_minmax(0,1fr)]" : "lg:grid-cols-[240px_minmax(0,1fr)]"
       }`}
     >
       <aside
@@ -95,7 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="space-y-1">
             <MainLink href="/" label="Sākums" icon={LayoutDashboard} active={pathname === "/"} onNavigate={close} />
             <MainLink
-              href="/klienti"
+              href="/clients"
               label="Klienti"
               icon={Building2}
               active={clientsActive}
@@ -107,15 +147,33 @@ export function AppShell({ children }: { children: ReactNode }) {
                   key={item.href}
                   {...item}
                   tone="dark"
-                  active={item.href === "/klienti" ? pathname === "/klienti" : pathname.startsWith(item.href)}
+                  active={navActive(pathname, item.href, item.exact)}
                   onNavigate={close}
                 />
               ))}
             </div>
             <MainLink
-              href="/saraksts"
+              href="/outgoing_invoices"
+              label="Izejošie rēķini"
+              icon={FileOutput}
+              active={navActive(pathname, "/outgoing_invoices")}
+              onNavigate={close}
+            />
+            <div className="space-y-1 py-1 pl-3 lg:hidden">
+              {OUTGOING.map((item) => (
+                <SubLink
+                  key={item.href}
+                  {...item}
+                  tone="dark"
+                  active={navActive(pathname, item.href, item.exact)}
+                  onNavigate={close}
+                />
+              ))}
+            </div>
+            <MainLink
+              href="/incoming_invoices"
               label="Ienākošie rēķini"
-              icon={ReceiptText}
+              icon={FileInput}
               active={incomingActive}
               count={unpaid + inbox.length}
               onNavigate={close}
@@ -126,7 +184,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   key={item.href}
                   {...item}
                   tone="dark"
-                  active={pathname.startsWith(item.href)}
+                  active={navActive(pathname, item.href, item.exact)}
                   count={countFor(item.href)}
                   onNavigate={close}
                 />
@@ -138,13 +196,35 @@ export function AppShell({ children }: { children: ReactNode }) {
                 onNavigate={close}
               />
             </div>
+            {CATALOG.map((item) => (
+              <div key={item.href}>
+                <MainLink
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  active={navActive(pathname, item.href)}
+                  onNavigate={close}
+                />
+                <div className="space-y-1 py-1 pl-3 lg:hidden">
+                  {catalogLinks(item.href).map((link) => (
+                    <SubLink
+                      key={link.href}
+                      {...link}
+                      tone="dark"
+                      active={navActive(pathname, link.href, link.exact)}
+                      onNavigate={close}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
           <div className="mt-4 border-t border-white/10 pt-4">
             <MainLink
               href={SETTINGS.href}
               label={SETTINGS.label}
               icon={SETTINGS.icon}
-              active={pathname.startsWith(SETTINGS.href)}
+              active={navActive(pathname, SETTINGS.href)}
               onNavigate={close}
             />
           </div>
@@ -164,8 +244,30 @@ export function AppShell({ children }: { children: ReactNode }) {
               <SubLink
                 key={item.href}
                 {...item}
-                active={item.href === "/klienti" ? pathname === "/klienti" : pathname.startsWith(item.href)}
+                active={navActive(pathname, item.href, item.exact)}
               />
+            ))}
+          </nav>
+        </aside>
+      ) : null}
+
+      {outgoingActive ? (
+        <aside className="sticky top-0 hidden h-screen flex-col self-start overflow-y-auto border-r border-[#d3e4da] bg-[#f4faf6] px-3 py-6 lg:flex">
+          <p className="px-3 text-xs font-semibold tracking-[0.14em] text-[#5f756a] uppercase">Izejošie rēķini</p>
+          <nav className="mt-4 space-y-1">
+            {OUTGOING.map((item) => (
+              <SubLink key={item.href} {...item} active={navActive(pathname, item.href, item.exact)} />
+            ))}
+          </nav>
+        </aside>
+      ) : null}
+
+      {catalogSection ? (
+        <aside className="sticky top-0 hidden h-screen flex-col self-start overflow-y-auto border-r border-[#d3e4da] bg-[#f4faf6] px-3 py-6 lg:flex">
+          <p className="px-3 text-xs font-semibold tracking-[0.14em] text-[#5f756a] uppercase">{catalogSection.label}</p>
+          <nav className="mt-4 space-y-1">
+            {catalogLinks(catalogSection.href).map((item) => (
+              <SubLink key={item.href} {...item} active={navActive(pathname, item.href, item.exact)} />
             ))}
           </nav>
         </aside>
@@ -180,7 +282,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <SubLink
                   key={item.href}
                   {...item}
-                  active={pathname.startsWith(item.href)}
+                  active={navActive(pathname, item.href, item.exact)}
                   count={countFor(item.href)}
                 />
               ))}
@@ -213,14 +315,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
           <p className="ml-3 font-semibold">{title}</p>
         </header>
-        {notice ? (
-          <FeedbackToast
-            key={`${notice.tone}:${notice.text}`}
-            message={notice.text}
-            tone={notice.tone}
-            onDismiss={dismissNotice}
-          />
-        ) : null}
+        <FeedbackToasts notices={notices} onDismiss={dismissNotice} />
         <main className="mx-auto w-full max-w-[1240px] px-4 py-6 sm:px-6 lg:px-10 lg:py-10">{children}</main>
       </div>
     </div>
@@ -272,6 +367,7 @@ function SubLink({
   active: boolean;
   count?: number;
   tone?: "light" | "dark";
+  exact?: boolean;
   onNavigate?: () => void;
 }) {
   const dark = tone === "dark";
