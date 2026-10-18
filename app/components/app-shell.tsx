@@ -3,6 +3,7 @@
 import { FeedbackToasts } from "@/app/components/feedback-toast";
 import { useInvoices } from "@/app/components/invoice-state";
 import { PersonalTodoButton, PersonalTodoPanel, useOpenTodoCount } from "@/app/components/personal-todo-panel";
+import { useOutgoingUnpaid } from "@/app/components/use-outgoing-unpaid";
 import { useDemoTasks } from "@/app/lib/tasks/demo-store";
 import {
   Calculator,
@@ -82,6 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [todoOpen, setTodoOpen] = useState(false);
   const todoCount = useOpenTodoCount();
   const unpaid = invoices.filter((invoice) => !invoice.paid).length;
+  const outgoingUnpaid = useOutgoingUnpaid();
   const sectionSettingsActive = navActive(pathname, INCOMING_SETTINGS.href);
   const incomingActive = pathname === "/incoming_invoices" || pathname.startsWith("/incoming_invoices/");
   const warehouseActive = pathname === "/warehouse" || pathname.startsWith("/warehouse/");
@@ -186,6 +188,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               label="Izejošie rēķini"
               icon={FileOutput}
               active={navActive(pathname, "/outgoing_invoices")}
+              count={outgoingUnpaid}
               onNavigate={close}
             />
             <MainLink

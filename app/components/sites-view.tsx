@@ -150,67 +150,83 @@ export function SitesView() {
         {sites.length === 0 ? (
           <p className="px-6 py-14 text-center text-sm text-[#5f756a]">Klientu vēl nav.</p>
         ) : (
-          <ul className="divide-y divide-[#e4efe8]">
-            {sites.map((site) => {
-              const mark = offerMarks[site.id];
-              const offerReady = Boolean(mark);
-              const offerLabel = offerButtonLabel(mark);
-              const needsReview = reviewSiteIds.includes(site.id);
-              return (
-                <li key={site.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="font-medium">{site.customer}</p>
-                    <p className="mt-1 text-sm text-[#5f756a]">{site.address}</p>
-                    <p className="mt-1 text-sm text-[#5f756a]">{site.iban || "Nav IBAN"}</p>
-                    {bankFromIban(site.iban)?.name ? <p className="text-sm text-[#5f756a]">{bankFromIban(site.iban)?.name}</p> : null}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    {needsReview ? (
-                      <span className="mr-1 inline-flex items-center gap-1.5 rounded-full bg-[#fdeceb] px-2.5 py-1 text-xs font-semibold text-[#8a1c14]">
-                        <CircleAlert className="size-3.5 shrink-0" aria-hidden="true" />
-                        Cenas jāpārskata
-                      </span>
-                    ) : null}
-                    <Tooltip text="Labot">
-                      <button type="button" onClick={() => beginEdit(site)} className={iconButton} aria-label="Labot">
-                        <Pencil className="size-4" aria-hidden="true" />
-                      </button>
-                    </Tooltip>
-                    {offerReady ? null : (
-                      <Tooltip text="Kopēt piedāvājumu">
-                        <button type="button" onClick={() => setCopySite(site)} className={iconButton} aria-label="Kopēt piedāvājumu">
-                          <Copy className="size-4" aria-hidden="true" />
-                        </button>
-                      </Tooltip>
-                    )}
-                    <Tooltip text={offerLabel}>
-                      <button type="button" onClick={() => setOfferSite(site)} className={mark?.fixed ? tameButton : iconButton} aria-label={offerLabel}>
-                        {offerReady ? (mark?.fixed ? <FileCheck className="size-4" aria-hidden="true" /> : <FileText className="size-4" aria-hidden="true" />) : <FilePlus className="size-4" aria-hidden="true" />}
-                        {mark?.fixed && mark.extras > 0 ? (
-                          <span
-                            aria-hidden="true"
-                            className={`absolute -top-1 -right-1 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-white ${mark.openExtra ? "bg-[#b42318]" : "bg-[#1f8a4c]"}`}
-                          >
-                            {mark.extras}
-                          </span>
-                        ) : null}
-                      </button>
-                    </Tooltip>
-                    <Tooltip text="Dzēst">
-                      <button
-                        type="button"
-                        onClick={() => setConfirmSite(site)}
-                        className={`${iconButton} text-[#b42318] hover:bg-[#fdeceb]`}
-                        aria-label="Dzēst"
-                      >
-                        <Trash2 className="size-4" aria-hidden="true" />
-                      </button>
-                    </Tooltip>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="bg-[#f7fbf8] text-xs tracking-wide text-[#5f756a] uppercase">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Pasūtītājs / Adrese</th>
+                  <th className="px-4 py-3 font-medium">Bankas konts / Banka</th>
+                  <th className="px-4 py-3 text-right font-medium">Darbības</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sites.map((site) => {
+                  const mark = offerMarks[site.id];
+                  const offerReady = Boolean(mark);
+                  const offerLabel = offerButtonLabel(mark);
+                  const needsReview = reviewSiteIds.includes(site.id);
+                  const bankName = bankFromIban(site.iban)?.name;
+                  return (
+                    <tr key={site.id} className="border-t border-[#e4efe8]">
+                      <td className="px-4 py-3">
+                        <p className="font-medium">{site.customer}</p>
+                        <p className="mt-0.5 text-sm text-[#5f756a]">{site.address}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium">{site.iban || "Nav IBAN"}</p>
+                        {bankName ? <p className="mt-0.5 text-sm text-[#5f756a]">{bankName}</p> : null}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          {needsReview ? (
+                            <span className="mr-1 inline-flex items-center gap-1.5 rounded-full bg-[#fdeceb] px-2.5 py-1 text-xs font-semibold text-[#8a1c14]">
+                              <CircleAlert className="size-3.5 shrink-0" aria-hidden="true" />
+                              Cenas jāpārskata
+                            </span>
+                          ) : null}
+                          <Tooltip text="Labot">
+                            <button type="button" onClick={() => beginEdit(site)} className={iconButton} aria-label="Labot">
+                              <Pencil className="size-4" aria-hidden="true" />
+                            </button>
+                          </Tooltip>
+                          {offerReady ? null : (
+                            <Tooltip text="Kopēt piedāvājumu">
+                              <button type="button" onClick={() => setCopySite(site)} className={iconButton} aria-label="Kopēt piedāvājumu">
+                                <Copy className="size-4" aria-hidden="true" />
+                              </button>
+                            </Tooltip>
+                          )}
+                          <Tooltip text={offerLabel}>
+                            <button type="button" onClick={() => setOfferSite(site)} className={mark?.fixed ? tameButton : iconButton} aria-label={offerLabel}>
+                              {offerReady ? (mark?.fixed ? <FileCheck className="size-4" aria-hidden="true" /> : <FileText className="size-4" aria-hidden="true" />) : <FilePlus className="size-4" aria-hidden="true" />}
+                              {mark?.fixed && mark.extras > 0 ? (
+                                <span
+                                  aria-hidden="true"
+                                  className={`absolute -top-1 -right-1 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-white ${mark.openExtra ? "bg-[#b42318]" : "bg-[#1f8a4c]"}`}
+                                >
+                                  {mark.extras}
+                                </span>
+                              ) : null}
+                            </button>
+                          </Tooltip>
+                          <Tooltip text="Dzēst">
+                            <button
+                              type="button"
+                              onClick={() => setConfirmSite(site)}
+                              className={`${iconButton} text-[#b42318] hover:bg-[#fdeceb]`}
+                              aria-label="Dzēst"
+                            >
+                              <Trash2 className="size-4" aria-hidden="true" />
+                            </button>
+                          </Tooltip>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
       {creating || editing ? (

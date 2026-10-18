@@ -116,24 +116,12 @@ export function RightDrawer({
 
   if (!ready) return null;
 
-  return createPortal(
-    <div
-      className={front ? "fixed inset-0 z-[110]" : beside == null ? "fixed inset-0" : "fixed inset-y-0 left-0 z-[80] overflow-hidden"}
-      data-drawer-front={front ? "" : undefined}
-      style={beside == null ? undefined : { right: offset }}
+  const panel = (
+    <form
+      ref={panelRef}
+      onSubmit={handleSubmit}
+      className={`absolute inset-y-0 right-0 flex w-full flex-col border-[#9fb8ac] bg-white ${beside == null ? "pointer-events-auto border-l shadow-2xl" : "border-r shadow-[-16px_0_32px_rgba(18,56,44,0.12)]"} ${panelClassName ?? (wide ? "max-w-[720px]" : "max-w-[440px]")}`}
     >
-      <button
-        ref={backdropRef}
-        type="button"
-        aria-label="Aizvērt"
-        onClick={requestClose}
-        className={beside == null ? `absolute inset-0 bg-[#12382c]/35 backdrop-blur-md ${front ? "" : "z-[70]"}` : "absolute inset-0"}
-      />
-      <form
-        ref={panelRef}
-        onSubmit={handleSubmit}
-        className={`absolute inset-y-0 right-0 flex w-full flex-col border-[#9fb8ac] bg-white ${beside == null ? "z-[90] border-l shadow-2xl" : "border-r shadow-[-16px_0_32px_rgba(18,56,44,0.12)]"} ${panelClassName ?? (wide ? "max-w-[720px]" : "max-w-[440px]")}`}
-      >
         <div className="flex items-start justify-between gap-3 border-b border-[#d3e4da] px-5 py-4">
           <div>
             <h2 className="text-lg font-semibold">{title}</h2>
@@ -143,10 +131,32 @@ export function RightDrawer({
             <X size={18} />
           </button>
         </div>
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">{children}</div>
-        {footer ? <div className="flex justify-end gap-2 border-t border-[#d3e4da] px-5 py-4">{footer(requestClose)}</div> : null}
-      </form>
-    </div>,
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">{children}</div>
+      {footer ? <div className="flex justify-end gap-2 border-t border-[#d3e4da] px-5 py-4">{footer(requestClose)}</div> : null}
+    </form>
+  );
+
+  if (beside != null) {
+    return createPortal(
+      <div className="fixed inset-y-0 left-0 z-[80] overflow-hidden" style={{ right: offset }}>
+        <button ref={backdropRef} type="button" aria-label="Aizvērt" onClick={requestClose} className="absolute inset-0" />
+        {panel}
+      </div>,
+      document.body,
+    );
+  }
+
+  return createPortal(
+    <>
+      <button
+        ref={backdropRef}
+        type="button"
+        aria-label="Aizvērt"
+        onClick={requestClose}
+        className={`fixed inset-0 bg-[#12382c]/35 backdrop-blur-md ${front ? "z-[110]" : "z-[70]"}`}
+      />
+      <div className={`pointer-events-none fixed inset-0 ${front ? "z-[110]" : "z-[90]"}`}>{panel}</div>
+    </>,
     document.body,
   );
 }

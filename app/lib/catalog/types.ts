@@ -80,6 +80,27 @@ export type HeldInstrument = {
   assignedOn: string;
 };
 
+export type MaterialReceipt = {
+  id: string;
+  quantity: number;
+  shop: string;
+  amount: number;
+  createdAt: string;
+  invoiceId: string | null;
+};
+
+export type Material = {
+  id: string;
+  name: string;
+  unit: string;
+  receipts: MaterialReceipt[];
+};
+
+export type MaterialDraft = {
+  name: string;
+  unit: string;
+};
+
 export type HeldClothing = {
   id: string;
   name: string;

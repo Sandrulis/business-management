@@ -82,7 +82,7 @@ Neapmaksātie: `paid = false`. Eksports ir FiDAViSta vai pain.001.001.09 no pieg
 
 ### Izejošie rēķini
 
-`OutgoingInvoicesView` tur `draftInvoices` tikai komponentes stāvoklī. Tabulas `outgoing` nav. Saglabāt, apmaksāt vai rādīt sākumā kā reālus rēķinus nedrīkst, kamēr nav migrācijas.
+`outgoing_invoices` glabā klientam izrakstītos rēķinus: klients, numurs, datums, termiņš, summas un neobligāta piedāvājuma pozīcija. Saraksts rāda tekošo mēnesi ar datuma filtru un iepriekšējo mēnesi. Jauns rēķins pēc izveides aizver sānu paneli un parāda paziņojumu. Grāmatvedības kopsavilkums ieņēmumus no šīs tabulas vēl nerāda.
 
 ### Grāmatvedība
 
@@ -102,7 +102,7 @@ Atskaite: dienas šūna ar stundām atver sānu paneli. Labošana atver otru pan
 
 ### Noliktava, instrumenti, apģērbs
 
-Noliktava ir cenu katalogs, ne daudzumu atlikums. Instrumenta piesaiste ir `instrument_assignments` ar `kind` `assigned` vai `returned`. Pēdējā rinda pēc `created_at` ir aktuālais turētājs. Apģērbam ir izmēru atlikums `clothing_stocks` un izsniegšana `clothing_assignments`.
+Noliktavas materiāli ir `materials` un iepirkumi `material_receipts` (daudzums, neobligāts veikals, summa, neobligāts `invoice_id` uz ienākošo rēķinu). Pozīciju cenas paliek `price_positions`. Instrumenta piesaiste ir `instrument_assignments` ar `kind` `assigned` vai `returned`. Pēdējā rinda pēc `created_at` ir aktuālais turētājs. Apģērbam ir izmēru atlikums `clothing_stocks` un izsniegšana `clothing_assignments`.
 
 ### Uzdevumi
 
@@ -149,7 +149,7 @@ npm run db:migrate
 
 `apply-migrations.mjs` pieraksta izpildītos failus `public.schema_migrations` un palaiž tikai pending. Neveiksmīgs fails netiek pierakstīts. Pēc veiksmīgas migrācijas skripts sūta `NOTIFY pgrst, 'reload schema'`.
 
-Jauna migrācija ir nākamais numurs (`024_…`). Jau pielietotu failu nerediģē. SQL ir idempotents (`if not exists`, `on conflict`, `add column if not exists`).
+Jauna migrācija ir nākamais numurs (`028_…`). Jau pielietotu failu nerediģē. SQL ir idempotents (`if not exists`, `on conflict`, `add column if not exists`).
 
 RLS ir ieslēgts, bet darba tabulām politika ir atvērta `anon` un `authenticated` (`demo_*_all`). Tā ir izstrādes piekļuve, ne gatava daudzlietotāju shēma. `001_initial_schema.sql` izveido `organizations`, `estimates`, `projects` un vecās `tools` tabulas. Lietotne tās nevaicā. Dzīvais modelis ir no `002` uz augšu.
 
@@ -177,9 +177,11 @@ Darba dati ir Postgres. Izņēmumi ir zemāk.
 | `sites` | Klienti: adrese, nosaukums, IBAN, banka |
 | `offers` | Piedāvājuma `jsonb` uz `site_id` |
 | `invoices` | Apstiprināti ienākošie rēķini, `paid`, termiņš, piegādātāja IBAN, avota fails |
+| `outgoing_invoices` | Izejošie rēķini klientiem: numurs, datums, termiņš, summas, pozīcija |
 | `inbox_items` | Vēl neapstiprināti e-pasta vai augšupielādes rēķini |
 | `mailbox_imports` | Jau ielasīto vēstuļu identifikatori |
-| `price_positions`, `price_entries` | Noliktavas pozīcija un cenu vēsture |
+| `materials`, `material_receipts` | Noliktavas materiāls, mērvienība un iepirkumi |
+| `price_positions`, `price_entries` | Pozīciju cenas un cenu vēsture |
 | `employees` | Darbinieka kartīte |
 | `work_sessions` | Maiņa: sākums, beigas, `paused_at`, `pause_seconds`, objekts |
 | `instruments`, `instrument_assignments` | Instruments un piesaiste vai atgriešana |
@@ -192,7 +194,6 @@ Kas nav datubāzē:
 
 | Vieta | Kur paliek |
 |---|---|
-| Izejošie rēķini | `OutgoingInvoicesView` stāvoklis, pazūd aizverot lapu |
 | Uzdevumi | `demo-store.ts` atmiņa |
 | Sākuma bloku redzamība | `localStorage` `bm_dashboard_blocks` |
 | Personīgais To Do | `localStorage` `bm_personal_todos` |
@@ -214,7 +215,7 @@ npm run build
 
 ## Roadmap
 
-- Saglabāt izejošos rēķinus un rādīt tos sākumā un grāmatvedības ieņēmumos
+- Rādīt izejošo rēķinu ieņēmumus grāmatvedības kopsavilkumā
 - Pārcelt uzdevumus no pārlūka parauga uz Postgres
 - Instrumenta remonta statuss, lai sākuma bloks "Remontā" nav vienmēr 0
 - Aizvērt atvērto demo RLS un pievienot lietotāju pieslēgšanos

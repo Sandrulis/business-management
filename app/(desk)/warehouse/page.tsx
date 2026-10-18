@@ -1,5 +1,5 @@
-import { WarehouseView } from "@/app/components/warehouse-view";
+import { WarehouseScreen } from "@/app/components/warehouse-screen";
 
 export default function WarehousePage() {
-  return <WarehouseView />;
+  return <WarehouseScreen />;
 }

@@ -12,6 +12,9 @@ import type {
   Instrument,
   InstrumentAssignment,
   InstrumentDraft,
+  Material,
+  MaterialDraft,
+  MaterialReceipt,
 } from "@/app/lib/catalog/types";
 
 type EmployeeRow = {
@@ -453,4 +456,99 @@ function toClothingAssignment(row: {
 function employeeError(code: string | undefined) {
   if (code === "23505") return "Darbinieks ar šo personas kodu jau ir.";
   return "Darbinieku neizdevās saglabāt.";
+}
+
+type MaterialReceiptRow = {
+  id: string;
+  quantity: number | string;
+  shop: string;
+  amount: number | string;
+  created_at: string;
+  invoice_id?: string | null;
+};
+
+export type MaterialReceiptInput = {
+  quantity: number;
+  shop: string;
+  amount: number;
+  invoiceId: string | null;
+};
+
+type MaterialRow = {
+  id: string;
+  name: string;
+  unit: string;
+  material_receipts: MaterialReceiptRow[] | null;
+};
+
+export async function loadMaterials(): Promise<{ ok: true; items: Material[] } | { ok: false; items: Material[] }> {
+  const supabase = createDataClient();
+  if (!supabase) return { ok: false, items: [] };
+  const { data, error } = await supabase
+    .from("materials")
+    .select("id, name, unit, material_receipts(id, quantity, shop, amount, created_at, invoice_id)")
+    .order("created_at", { ascending: false });
+  if (error || !data) return { ok: false, items: [] };
+  return { ok: true, items: data.map(toMaterial) };
+}
+
+export async function saveMaterialRecord(draft: MaterialDraft): Promise<{ ok: true; item: Material } | { ok: false; message: string }> {
+  const supabase = createDataClient();
+  if (!supabase) return { ok: false, message: "Datubāze nav pieslēgta." };
+  const { data, error } = await supabase
+    .from("materials")
+    .insert({ name: draft.name.trim(), unit: draft.unit.trim() })
+    .select("id, name, unit")
+    .single();
+  if (error || !data) return { ok: false, message: "Materiālu neizdevās saglabāt." };
+  return { ok: true, item: { id: data.id as string, name: data.name as string, unit: data.unit as string, receipts: [] } };
+}
+
+export async function addMaterialReceipt(
+  materialId: string,
+  receipt: MaterialReceiptInput,
+): Promise<{ ok: true; receipt: MaterialReceipt } | { ok: false; message: string }> {
+  return sendMaterialReceipt("/api/materials/receipts", "POST", { materialId, ...receipt });
+}
+
+export async function updateMaterialReceipt(
+  receiptId: string,
+  receipt: MaterialReceiptInput,
+): Promise<{ ok: true; receipt: MaterialReceipt } | { ok: false; message: string }> {
+  return sendMaterialReceipt(`/api/materials/receipts/${receiptId}`, "PATCH", receipt);
+}
+
+async function sendMaterialReceipt(
+  url: string,
+  method: "POST" | "PATCH",
+  body: MaterialReceiptInput | (MaterialReceiptInput & { materialId: string }),
+): Promise<{ ok: true; receipt: MaterialReceipt } | { ok: false; message: string }> {
+  const response = await fetch(url, {
+    method,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json().catch(() => null)) as { message?: string; receipt?: MaterialReceipt } | null;
+  if (!response.ok || !payload?.receipt) return { ok: false, message: payload?.message || "Atlikumu neizdevās saglabāt." };
+  return { ok: true, receipt: payload.receipt };
+}
+
+function toMaterial(row: MaterialRow): Material {
+  return {
+    id: row.id,
+    name: row.name,
+    unit: row.unit,
+    receipts: (row.material_receipts ?? []).map(toMaterialReceipt).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+  };
+}
+
+function toMaterialReceipt(row: MaterialReceiptRow): MaterialReceipt {
+  return {
+    id: row.id,
+    quantity: Number(row.quantity),
+    shop: row.shop ?? "",
+    amount: Number(row.amount),
+    createdAt: row.created_at,
+    invoiceId: row.invoice_id ?? null,
+  };
 }

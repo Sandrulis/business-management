@@ -6,6 +6,7 @@ import { loadInstruments } from "@/app/lib/catalog/repository";
 import type { Instrument } from "@/app/lib/catalog/types";
 import { addDays, duePhrase, formatDate, formatMoney, isOverdue, type Invoice, type Site } from "@/app/lib/invoices/model";
 import { loadOfferDocuments } from "@/app/lib/offers/repository";
+import { loadOutgoingInvoices, type OutgoingInvoice } from "@/app/lib/outgoing/repository";
 import type { OfferDocument } from "@/app/lib/offers/model";
 import { formatDuration, workedSeconds, type WorkSession } from "@/app/lib/work-sessions/model";
 import { loadOpenSessions } from "@/app/lib/work-sessions/repository";
@@ -34,6 +35,7 @@ export function HomeView() {
   const [offers, setOffers] = useState<{ site: Site; note: string }[]>([]);
   const [sessions, setSessions] = useState<WorkSession[]>([]);
   const [tools, setTools] = useState<Instrument[]>([]);
+  const [outgoing, setOutgoing] = useState<OutgoingInvoice[]>([]);
   const [now, setNow] = useState(0);
 
   useEffect(() => {
@@ -98,6 +100,17 @@ export function HomeView() {
     let active = true;
     loadInstruments().then((result) => {
       if (active && result.ok) setTools(result.items);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    loadOutgoingInvoices().then((result) => {
+      if (!active || !result.ok) return;
+      setOutgoing(result.items.filter((invoice) => !invoice.paid).sort((a, b) => a.dueOn.localeCompare(b.dueOn)));
     });
     return () => {
       active = false;
@@ -174,8 +187,15 @@ export function HomeView() {
         ) : null}
 
         {visible("outgoing") ? (
-          <Card title="Izejošie neapmaksātie" href="/outgoing_invoices" action="Izejošie rēķini" count={0} onHide={() => toggle("outgoing")}>
-            <Empty text="Izejošie rēķini vēl netiek saglabāti, tāpēc neapmaksāto saraksts ir tukšs." />
+          <Card
+            title="Izejošie neapmaksātie"
+            href="/outgoing_invoices"
+            action="Izejošie rēķini"
+            count={outgoing.length}
+            extra={outgoing.length > 0 ? formatMoney(outgoing.reduce((sum, invoice) => sum + invoice.gross, 0)) : undefined}
+            onHide={() => toggle("outgoing")}
+          >
+            {outgoing.length === 0 ? <Empty text="Neapmaksātu izejošo rēķinu nav." /> : <OutgoingList rows={outgoing.slice(0, 6)} today={today} />}
           </Card>
         ) : null}
 
@@ -279,6 +299,31 @@ function Card({
       </div>
       <div className="mt-3">{children}</div>
     </article>
+  );
+}
+
+function OutgoingList({ rows, today }: { rows: OutgoingInvoice[]; today: string }) {
+  return (
+    <ul className="divide-y divide-[#e4efe8]">
+      {rows.map((invoice) => {
+        const overdue = isOverdue(invoice.dueOn, today, invoice.paid);
+        const phrase = duePhrase(invoice.dueOn, today);
+        return (
+          <li key={invoice.id} className="flex items-start justify-between gap-3 py-3">
+            <div className="min-w-0">
+              <p className="truncate font-medium">{invoice.clientName}</p>
+              <p className="mt-0.5 truncate text-sm text-[#5f756a]">{invoice.number}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-semibold tabular-nums">{formatMoney(invoice.gross)}</p>
+              <p className={`mt-0.5 text-xs ${overdue ? "font-semibold text-[#b42318]" : "text-[#5f756a]"}`}>
+                {formatDate(invoice.dueOn)} · {phrase.text}
+              </p>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

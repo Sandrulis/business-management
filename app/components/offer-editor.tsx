@@ -189,7 +189,7 @@ export function OfferEditor({ site, onClose, onReady }: { site: Site; onClose: (
     <RightDrawer
       title={locked ? "Tāme" : "Piedāvājums"}
       hint={site.customer}
-      panelClassName="max-w-[min(1520px,calc(100vw-12px))]"
+      panelClassName="w-full max-w-none"
       onClose={close}
     >
       <PriceCatalogContext.Provider value={{ cards, invoices, reload: reloadPrices }}>
@@ -423,16 +423,13 @@ function OfferSheet({
           {!locked && offerPriceUpdates(nodes, cards).length > 0 ? (
             <p className="mb-3 rounded-xl border border-[#f3c1bc] bg-[#fdeceb] px-3 py-2 text-sm text-[#8a1c14]">Pozīcijās ir cenu izmaiņas, kas jāpārskata.</p>
           ) : null}
-          <div className="overflow-x-auto rounded-2xl border border-[#d3e4da]">
-            <table
-              className="border-collapse text-sm table-fixed [&_td]:border [&_td]:border-[#d3e4da] [&_th]:border [&_th]:border-[#d3e4da]"
-              style={{ width: offerTableWidth(columnWidths) }}
-            >
+          <div className="overflow-hidden rounded-2xl border border-[#d3e4da]">
+            <table className="w-full table-fixed border-collapse text-sm [&_td]:border [&_td]:border-[#d3e4da] [&_th]:border [&_th]:border-[#d3e4da]">
               <colgroup>
                 {OFFER_COLUMNS.map((column) => (
-                  <col key={column.key} style={{ width: columnWidths[column.key] }} />
+                  <col key={column.key} style={{ width: columnShare(columnWidths, columnWidths[column.key]) }} />
                 ))}
-                <col style={{ width: OFFER_ACTION_WIDTH }} />
+                <col style={{ width: columnShare(columnWidths, OFFER_ACTION_WIDTH) }} />
               </colgroup>
               <thead className="bg-[#f4faf6] text-xs text-[#5f756a]">
                 <tr>
@@ -1393,6 +1390,11 @@ function offerTableWidth(widths: OfferColumnWidths) {
   return OFFER_COLUMNS.reduce((sum, column) => sum + widths[column.key], OFFER_ACTION_WIDTH);
 }
 
+function columnShare(widths: OfferColumnWidths, width: number) {
+  const total = offerTableWidth(widths);
+  return `${(width / total) * 100}%`;
+}
+
 function clampColumn(column: OfferColumn, width: number) {
   const limits = OFFER_COLUMNS.find((item) => item.key === column);
   if (!limits) return width;
@@ -1449,15 +1451,11 @@ function ResizableHead({
     handle.setPointerCapture(event.pointerId);
     const startX = event.clientX;
     const start = width;
-    const table = handle.closest("table");
-    const frame = table?.parentElement;
-    const slack = frame && table ? Math.max(0, Math.floor(frame.clientWidth - table.getBoundingClientRect().width)) : 0;
-    const ceiling = start + slack;
     let latest = start;
     const previousCursor = document.body.style.cursor;
     document.body.style.cursor = "col-resize";
     function move(next: PointerEvent) {
-      latest = Math.min(ceiling, clampColumn(column, start + next.clientX - startX));
+      latest = clampColumn(column, start + next.clientX - startX);
       onResizeRef.current(column, latest, false);
     }
     function up() {
@@ -1471,7 +1469,7 @@ function ResizableHead({
   }
 
   return (
-    <th rowSpan={rowSpan} className={`relative ${className}`} style={{ width }}>
+    <th rowSpan={rowSpan} className={`relative overflow-hidden ${className}`}>
       {children}
       <span
         role="separator"

@@ -1,5 +1,5 @@
-import { OutgoingInvoicesView } from "@/app/components/outgoing-invoices-view";
+import { OutgoingInvoicesScreen } from "@/app/components/outgoing-invoices-screen";
 
 export default function OutgoingInvoicesPage() {
-  return <OutgoingInvoicesView />;
+  return <OutgoingInvoicesScreen />;
 }
