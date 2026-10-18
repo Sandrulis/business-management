@@ -7,10 +7,12 @@ export function Tooltip({
   text,
   children,
   className = "",
+  wide = false,
 }: {
   text: string;
   children: ReactNode;
   className?: string;
+  wide?: boolean;
 }) {
   const anchor = useRef<HTMLSpanElement>(null);
   const [place, setPlace] = useState<{ left: number; top: number; below: boolean } | null>(null);
@@ -40,7 +42,7 @@ export function Tooltip({
             <span
               role="tooltip"
               style={{ left: place.left, top: place.top }}
-              className={`pointer-events-none fixed z-[110] -translate-x-1/2 rounded-lg bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-medium whitespace-nowrap text-white shadow-lg ${place.below ? "mt-2" : "-translate-y-full -mt-2"}`}
+              className={`pointer-events-none fixed z-[110] -translate-x-1/2 rounded-lg bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-medium text-white shadow-lg ${wide ? "max-w-72 text-left whitespace-normal" : "whitespace-nowrap"} ${place.below ? "mt-2" : "-translate-y-full -mt-2"}`}
             >
               {text}
             </span>,

@@ -5,7 +5,6 @@ import { useEmployeeNames } from "@/app/components/employees-view";
 import { useInvoices } from "@/app/components/invoice-state";
 import { RightDrawer } from "@/app/components/right-drawer";
 import {
-  CenterDialog,
   StockAddModal,
   StockBreakdownModal,
   addStockLine,
@@ -336,20 +335,40 @@ function AssignModal({
     setOpenKey(null);
   }
 
-  async function submit(event: FormEvent) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (chosen.length === 0) return;
+    if (chosen.length === 0) return false;
     const result = await onAssign(chosen);
     if (result === "stock") {
       setError("Atlikumā nav tik daudz šī izmēra.");
-      return;
+      return false;
     }
-    if (result === "ok") onClose();
+    if (result !== "ok") return false;
   }
 
   return (
-    <CenterDialog title="Piesaistīt" onClose={onClose}>
-      <form onSubmit={submit}>
+    <RightDrawer
+      title="Piesaistīt"
+      hint={item.name}
+      onClose={onClose}
+      onSubmit={submit}
+      footer={(close) => (
+        <>
+          <button type="button" onClick={close} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+            <X className="size-4 shrink-0" aria-hidden="true" />
+            Atcelt
+          </button>
+          <button
+            type="submit"
+            disabled={chosen.length === 0}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+          >
+            <UserPlus className="size-4 shrink-0" aria-hidden="true" />
+            Piesaistīt
+          </button>
+        </>
+      )}
+    >
         <p className="text-sm text-[#5f756a]">Katrs darbinieks noņem 1 no atlikuma. Tukšā rinda netiek ņemta vērā.</p>
         {employees.length === 0 || sizes.length === 0 ? (
           <p className="mt-4 text-sm text-[#5f756a]">{employees.length === 0 ? "Darbinieku vēl nav." : "Atlikumā nav izmēru."}</p>
@@ -411,23 +430,8 @@ function AssignModal({
             })}
           </div>
         )}
-        {error ? <p className="mt-3 text-sm text-[#b42318]">{error}</p> : null}
-        <div className="mt-6 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
-            <X className="size-4 shrink-0" aria-hidden="true" />
-            Atcelt
-          </button>
-          <button
-            type="submit"
-            disabled={chosen.length === 0}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
-          >
-            <UserPlus className="size-4 shrink-0" aria-hidden="true" />
-            Piesaistīt
-          </button>
-        </div>
-      </form>
-    </CenterDialog>
+        {error ? <p className="text-sm text-[#b42318]">{error}</p> : null}
+    </RightDrawer>
   );
 }
 

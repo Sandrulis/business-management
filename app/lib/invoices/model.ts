@@ -4,6 +4,9 @@ export type Site = {
   customer: string;
   iban: string;
   bankName: string;
+  email: string;
+  phone: string;
+  note: string;
 };
 
 export type Invoice = {

@@ -174,7 +174,7 @@ Darba dati ir Postgres. Izņēmumi ir zemāk.
 |---|---|
 | `company_settings` | Viena rinda (`id = 1`): profils, PVN, banka, pastkaste, `offer_hourly_rate`, `offer_valid_days`, `offer_note` |
 | `mailboxes` | Papildu pastkastes |
-| `sites` | Klienti: adrese, nosaukums, IBAN, banka |
+| `sites` | Klienti: adrese, nosaukums, IBAN, banka, e-pasts, telefons, piezīme |
 | `offers` | Piedāvājuma `jsonb` uz `site_id` |
 | `invoices` | Apstiprināti ienākošie rēķini, `paid`, termiņš, piegādātāja IBAN, avota fails |
 | `outgoing_invoices` | Izejošie rēķini klientiem: numurs, datums, termiņš, summas, pozīcija |

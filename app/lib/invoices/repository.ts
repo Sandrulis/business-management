@@ -105,7 +105,7 @@ export async function loadDeskData(): Promise<DeskData> {
     supabase.from("invoices").select("*").order("issued_on", { ascending: false }),
     supabase.from("inbox_items").select("*").eq("unread", true).order("received_on", { ascending: false }),
     supabase.from("company_settings").select("*").eq("id", 1).maybeSingle(),
-    supabase.from("sites").select("id, address, customer, iban, bank_name").order("customer"),
+    supabase.from("sites").select("id, address, customer, iban, bank_name, email, phone, note").order("customer"),
     supabase.from("mailboxes").select("id, email, password, sort_order").order("sort_order"),
   ]);
 
@@ -244,6 +244,9 @@ type SiteRow = {
   customer: string;
   iban?: string | null;
   bank_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  note?: string | null;
 };
 
 function toSite(row: SiteRow): Site {
@@ -253,11 +256,22 @@ function toSite(row: SiteRow): Site {
     customer: row.customer,
     iban: row.iban ?? "",
     bankName: row.bank_name ?? "",
+    email: row.email ?? "",
+    phone: row.phone ?? "",
+    note: row.note ?? "",
   };
 }
 
 export async function saveSite(supabase: SupabaseClient, site: Site) {
-  const row = { address: site.address, customer: site.customer, iban: site.iban, bank_name: site.bankName };
+  const row = {
+    address: site.address,
+    customer: site.customer,
+    iban: site.iban,
+    bank_name: site.bankName,
+    email: site.email,
+    phone: site.phone,
+    note: site.note,
+  };
   const query = site.id
     ? supabase.from("sites").update(row).eq("id", site.id).select("id").single()
     : supabase.from("sites").insert(row).select("id").single();

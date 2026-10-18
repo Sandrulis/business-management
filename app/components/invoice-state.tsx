@@ -257,6 +257,9 @@ export function InvoiceProvider({
           ...site,
           address: site.address.trim(),
           customer: site.customer.trim(),
+          email: site.email.trim(),
+          phone: site.phone.trim(),
+          note: site.note.trim(),
           iban,
           bankName: bankFromIban(iban)?.name ?? "",
         };

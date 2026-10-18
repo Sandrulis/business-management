@@ -10,18 +10,15 @@ import { bankFromIban, isValidIban, normalizeIban } from "@/app/lib/payments/iba
 import { copyOfferDocument, offerNeedsPriceReview } from "@/app/lib/offers/model";
 import { loadOffer, loadOfferDocuments, saveOffer } from "@/app/lib/offers/repository";
 import { loadPriceCatalog } from "@/app/lib/prices/repository";
-import { Check, CircleAlert, Copy, FileCheck, FilePlus, FileText, Pencil, Plus, Trash2, X } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { Check, CircleAlert, Copy, FileCheck, FilePlus, FileText, Mail, MessageSquare, Pencil, Phone, Plus, Trash2, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
-const emptySite = (): Site => ({ id: "", address: "", customer: "", iban: "", bankName: "" });
+const emptySite = (): Site => ({ id: "", address: "", customer: "", iban: "", bankName: "", email: "", phone: "", note: "" });
 
 export function SitesView() {
-  const pathname = usePathname();
-  const router = useRouter();
   const { sites, saveSite, removeSite, notify } = useInvoices();
-  const creating = pathname === "/clients/new";
+  const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState<Site>(emptySite);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -84,17 +81,26 @@ export function SitesView() {
   const editDirty = editing
     ? draft.customer.trim() !== editing.customer ||
       draft.address.trim() !== editing.address ||
+      draft.email.trim() !== editing.email ||
+      draft.phone.trim() !== editing.phone ||
+      draft.note.trim() !== editing.note ||
       ibanValue !== normalizeIban(editing.iban)
     : false;
 
   function close() {
-    const wasEditing = editingId !== null;
+    setCreating(false);
     setEditingId(null);
     setDraft(emptySite());
-    if (!wasEditing) router.push("/clients");
+  }
+
+  function beginCreate() {
+    setEditingId(null);
+    setDraft(emptySite());
+    setCreating(true);
   }
 
   function beginEdit(site: Site) {
+    setCreating(false);
     setEditingId(site.id);
     setDraft(site);
   }
@@ -115,7 +121,6 @@ export function SitesView() {
       return false;
     }
     notify(editing ? "Klients saglabāts." : "Klients pievienots.", "ok");
-    if (!editing) setDraft(emptySite());
   }
 
   async function remove(id: string) {
@@ -140,7 +145,7 @@ export function SitesView() {
             Nosaukums, adrese un IBAN vajag maksājuma failam. Banku nolasa no IBAN.
           </p>
         </div>
-        <button type="button" onClick={() => router.push("/clients/new")} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-4 text-sm font-semibold text-white hover:bg-[#0f4a34]">
+        <button type="button" onClick={beginCreate} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-4 text-sm font-semibold text-white hover:bg-[#0f4a34]">
           <Plus className="size-4 shrink-0" aria-hidden="true" />
           Pievienot
         </button>
@@ -171,6 +176,29 @@ export function SitesView() {
                       <td className="px-4 py-3">
                         <p className="font-medium">{site.customer}</p>
                         <p className="mt-0.5 text-sm text-[#5f756a]">{site.address}</p>
+                        {site.email || site.phone || site.note ? (
+                          <p className="mt-1 flex items-center gap-3 text-sm text-[#5f756a]">
+                            {site.email ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <Mail className="size-3.5 shrink-0" aria-hidden="true" />
+                                {site.email}
+                              </span>
+                            ) : null}
+                            {site.phone ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <Phone className="size-3.5 shrink-0" aria-hidden="true" />
+                                {site.phone}
+                              </span>
+                            ) : null}
+                            {site.note ? (
+                              <Tooltip text={site.note} wide>
+                                <span tabIndex={0} className="inline-flex text-[#3b7ddd]" aria-label={site.note}>
+                                  <MessageSquare className="size-3.5" aria-hidden="true" />
+                                </span>
+                              </Tooltip>
+                            ) : null}
+                          </p>
+                        ) : null}
                       </td>
                       <td className="px-4 py-3">
                         <p className="font-medium">{site.iban || "Nav IBAN"}</p>
@@ -284,6 +312,36 @@ export function SitesView() {
               placeholder="LV00BANK0000000000000"
             />
             {ibanHint(draft.iban)}
+          </label>
+          <label className="block text-sm font-medium">
+            E-pasts
+            <input
+              value={draft.email}
+              onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))}
+              className={fieldClass}
+              placeholder="Neobligāts"
+              inputMode="email"
+            />
+          </label>
+          <label className="block text-sm font-medium">
+            Telefons
+            <input
+              value={draft.phone}
+              onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))}
+              className={fieldClass}
+              placeholder="Neobligāts"
+              inputMode="tel"
+            />
+          </label>
+          <label className="block text-sm font-medium">
+            Piezīme
+            <textarea
+              value={draft.note}
+              onChange={(event) => setDraft((current) => ({ ...current, note: event.target.value }))}
+              className={noteClass}
+              placeholder="Neobligāta"
+              rows={3}
+            />
           </label>
         </RightDrawer>
       ) : null}
@@ -412,3 +470,6 @@ function offerButtonLabel(mark: OfferMark | undefined) {
 
 const fieldClass =
   "mt-2 h-11 w-full rounded-xl border border-[#c5d9cd] bg-white px-3 font-normal outline-none focus:border-[#1a6b4a] focus:ring-4 focus:ring-[#1a6b4a]/15";
+
+const noteClass =
+  "mt-2 min-h-24 w-full rounded-xl border border-[#c5d9cd] bg-white px-3 py-2 font-normal outline-none focus:border-[#1a6b4a] focus:ring-4 focus:ring-[#1a6b4a]/15";

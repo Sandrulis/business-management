@@ -4,6 +4,12 @@
 
 - (none)
 
+## v0.1.2
+
+- Klientam var norādīt e-pastu, telefonu un piezīmi. Pievienošana atveras sānu panelī
+- Sarakstā e-pasts un telefons ir vienā rindā ar ikonām, piezīme ir zilā ikonā
+- Apģērba un instrumentu piesaiste atveras sānu panelī
+
 ## v0.1.1
 
 - Noliktavas materiāli un iepirkumi paliek datubāzē, ar daudzumu, veikalu, summu un neobligātu ienākošo rēķinu
