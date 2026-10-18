@@ -24,7 +24,6 @@ async function DeskFrame({ children }: { children: ReactNode }) {
       invoices={data.invoices}
       inbox={data.inbox}
       sites={data.sites}
-      works={data.works}
       settings={data.settings}
       initialNotice={data.notice}
     >

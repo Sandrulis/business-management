@@ -6,11 +6,6 @@ export type Site = {
   bankName: string;
 };
 
-export type Work = {
-  id: string;
-  name: string;
-};
-
 export type Invoice = {
   id: string;
   number: string;
@@ -19,8 +14,8 @@ export type Invoice = {
   client: string;
   objectId: string | null;
   objectName: string;
-  workId: string | null;
-  workName: string;
+  categoryId: string;
+  categoryName: string;
   net: number;
   gross: number;
   issuedOn: string;
@@ -184,8 +179,8 @@ export function buildInvoices(today: string): Invoice[] {
       client: "SIA Nordhaus",
       objectName: "Birojs, Brīvības iela 45",
       objectId: null,
-      workId: null,
-      workName: "Materiāli",
+      categoryId: "",
+      categoryName: "Materiāli",
       net: 1284.3,
       gross: vatGross(1284.3),
       issuedOn: issuedOn(today, current, 3),
@@ -199,8 +194,8 @@ export function buildInvoices(today: string): Invoice[] {
       client: "Baltic Wood, AS",
       objectName: "Ražotne, Jelgava",
       objectId: null,
-      workId: null,
-      workName: "Apakšuzņēmējs",
+      categoryId: "",
+      categoryName: "Apakšuzņēmējs",
       net: 6400,
       gross: vatGross(6400),
       issuedOn: issuedOn(today, current, 6),
@@ -214,8 +209,8 @@ export function buildInvoices(today: string): Invoice[] {
       client: "SIA Nordhaus",
       objectName: "Noliktava, Mārupe",
       objectId: null,
-      workId: null,
-      workName: "Transports",
+      categoryId: "",
+      categoryName: "Transports",
       net: 214.88,
       gross: vatGross(214.88),
       issuedOn: issuedOn(today, current, 2),
@@ -229,8 +224,8 @@ export function buildInvoices(today: string): Invoice[] {
       client: "Rīgas Namu Serviss",
       objectName: "Fasāde, Miera iela 12",
       objectId: null,
-      workId: null,
-      workName: "Noma",
+      categoryId: "",
+      categoryName: "Noma",
       net: 860,
       gross: vatGross(860),
       issuedOn: issuedOn(today, current, 9),
@@ -244,8 +239,8 @@ export function buildInvoices(today: string): Invoice[] {
       client: "SIA Nordhaus",
       objectName: "Birojs, Brīvības iela 45",
       objectId: null,
-      workId: null,
-      workName: "Komunālie",
+      categoryId: "",
+      categoryName: "Komunālie",
       net: 406.2,
       gross: vatGross(406.2),
       issuedOn: issuedOn(today, current, 11),
@@ -259,8 +254,8 @@ export function buildInvoices(today: string): Invoice[] {
       client: "Baltic Wood, AS",
       objectName: "Ražotne, Jelgava",
       objectId: null,
-      workId: null,
-      workName: "Instrumenti",
+      categoryId: "",
+      categoryName: "Instrumenti",
       net: 1540,
       gross: vatGross(1540),
       issuedOn: issuedOn(today, current, 1),
@@ -274,8 +269,8 @@ export function buildInvoices(today: string): Invoice[] {
       client: "Rīgas Namu Serviss",
       objectName: "Kāpņu telpa, Tallinas iela 8",
       objectId: null,
-      workId: null,
-      workName: "Materiāli",
+      categoryId: "",
+      categoryName: "Materiāli",
       net: 980.4,
       gross: vatGross(980.4),
       issuedOn: issuedOn(today, previous, 18),
@@ -289,8 +284,8 @@ export function buildInvoices(today: string): Invoice[] {
       client: "SIA Nordhaus",
       objectName: "Birojs, Brīvības iela 45",
       objectId: null,
-      workId: null,
-      workName: "Transports",
+      categoryId: "",
+      categoryName: "Transports",
       net: 320,
       gross: vatGross(320),
       issuedOn: issuedOn(today, next, 4),

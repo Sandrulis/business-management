@@ -6,11 +6,13 @@ import { EmailFrame } from "@/app/components/email-frame";
 import { FloatingPanel } from "@/app/components/floating-panel";
 import { PdfPreview } from "@/app/components/pdf-preview";
 import { useInvoices } from "@/app/components/invoice-state";
+import { useOfferCategories } from "@/app/components/use-offer-categories";
 import { formatFileSize, invoicePreviewKind } from "@/app/lib/invoices/files";
 import { formatDate, vatGross, type InboxItem } from "@/app/lib/invoices/model";
 import { type InvoiceRead } from "@/app/lib/invoices/parse-invoice-text";
 import { readInvoiceFile } from "@/app/lib/invoices/read-invoice-file";
 import { isValidIban } from "@/app/lib/payments/iban";
+import { Mail, Plus, Trash2 } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -99,8 +101,9 @@ export function InboxView() {
           type="button"
           onClick={() => void loadMail()}
           disabled={!mailboxReady || loadingMail}
-          className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
         >
+          <Mail className="size-4 shrink-0" aria-hidden="true" />
           {loadingMail ? "Ielādē..." : "Ielādēt epastus"}
         </button>
       </div>
@@ -152,8 +155,9 @@ export function InboxView() {
                     <button
                       type="button"
                       onClick={() => setDeleteTarget(item)}
-                      className="h-9 rounded-xl px-3 text-sm font-semibold text-[#b42318]"
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-[#b42318]"
                     >
+                      <Trash2 className="size-4 shrink-0" aria-hidden="true" />
                       Dzēst
                     </button>
                   </div>
@@ -187,9 +191,10 @@ export function InboxView() {
 }
 
 function ReviewForm({ item }: { item: InboxItem }) {
-  const { approve, discardInbox, notify, sites, works } = useInvoices();
+  const { approve, discardInbox, notify, sites } = useInvoices();
   const [objectId, setObjectId] = useState("");
-  const [workId, setWorkId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const categories = useOfferCategories(objectId);
   const [number, setNumber] = useState(item.number);
   const [issuedOn, setIssuedOn] = useState("");
   const [net, setNet] = useState(item.net?.toString() ?? "");
@@ -201,16 +206,14 @@ function ReviewForm({ item }: { item: InboxItem }) {
   const touched = useRef({ number: false, issuedOn: false, dueOn: false, net: false, gross: false });
   const { read, status } = useInvoiceRead(item);
   const site = sites.find((entry) => entry.id === objectId) ?? null;
-  const work = works.find((entry) => entry.id === workId) ?? null;
+  const category = categories.find((entry) => entry.id === categoryId) ?? null;
   const netValue = parseAmount(net);
   const grossValue = parseAmount(gross);
   const canSubmit =
     sites.length > 0 &&
-    works.length > 0 &&
     !deleting &&
     site != null &&
-    work != null &&
-    number.trim() !== "" &&
+    category != null &&
     issuedOn.trim() !== "" &&
     dueOn.trim() !== "" &&
     hasAmount(net) &&
@@ -231,8 +234,8 @@ function ReviewForm({ item }: { item: InboxItem }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canSubmit || !site || !work) {
-      notify("Izvēlieties klientu un darbu, un aizpildiet numuru, datumus un summas.", "error");
+    if (!canSubmit || !site || !category) {
+      notify("Izvēlieties klientu un pozīciju, un aizpildiet numuru, datumus un summas.", "error");
       return;
     }
 
@@ -240,9 +243,9 @@ function ReviewForm({ item }: { item: InboxItem }) {
       client: site.customer,
       objectId: site.id,
       objectName: site.address,
-      workId: work.id,
-      workName: work.name,
-      number: number.trim(),
+      categoryId: category.id,
+      categoryName: category.name,
+      number,
       issuedOn,
       net: netValue,
       gross: grossValue,
@@ -263,16 +266,21 @@ function ReviewForm({ item }: { item: InboxItem }) {
         <Info label="Temats" value={item.subject} />
       </dl>
 
-      {sites.length === 0 || works.length === 0 ? (
-        <p className="mt-6 text-sm text-[#5f756a]">
-          Vispirms sadaļā Klienti pievieno vismaz vienu klientu un vienu darbu.
-        </p>
+      {sites.length === 0 ? (
+        <p className="mt-6 text-sm text-[#5f756a]">Vispirms sadaļā Klienti pievieno vismaz vienu klientu.</p>
       ) : null}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-medium">
           Klients
-          <select value={objectId} onChange={(event) => setObjectId(event.target.value)} className={fieldClass}>
+          <select
+            value={objectId}
+            onChange={(event) => {
+              setObjectId(event.target.value);
+              setCategoryId("");
+            }}
+            className={fieldClass}
+          >
             <option value="">Izvēlēties klientu</option>
             {sites.map((entry) => (
               <option key={entry.id} value={entry.id}>
@@ -286,15 +294,18 @@ function ReviewForm({ item }: { item: InboxItem }) {
           ) : null}
         </label>
         <label className="block text-sm font-medium">
-          Darbs
-          <select value={workId} onChange={(event) => setWorkId(event.target.value)} className={fieldClass}>
-            <option value="">Izvēlēties darbu</option>
-            {works.map((entry) => (
+          Pozīcija
+          <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} disabled={!site} className={fieldClass}>
+            <option value="">{site ? "Izvēlēties pozīciju" : "Vispirms izvēlies klientu"}</option>
+            {categories.map((entry) => (
               <option key={entry.id} value={entry.id}>
                 {entry.name}
               </option>
             ))}
           </select>
+          {site && categories.length === 0 ? (
+            <span className="mt-1 block text-xs font-normal text-[#5f756a]">Šim klientam piedāvājumā nav kategoriju.</span>
+          ) : null}
         </label>
         <label className="block text-sm font-medium">
           Rēķina numurs
@@ -364,14 +375,16 @@ function ReviewForm({ item }: { item: InboxItem }) {
       </div>
 
       <div className="mt-6 flex items-center justify-between gap-3">
-        <button type="button" onClick={() => setConfirmDelete(true)} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#b42318]">
+        <button type="button" onClick={() => setConfirmDelete(true)} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#b42318]">
+          <Trash2 className="size-4 shrink-0" aria-hidden="true" />
           Dzēst
         </button>
         <button
           type="submit"
           disabled={!canSubmit}
-          className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
         >
+          <Plus className="size-4 shrink-0" aria-hidden="true" />
           Pievienot sarakstam
         </button>
       </div>

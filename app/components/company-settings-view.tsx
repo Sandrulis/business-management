@@ -3,6 +3,7 @@
 import { useInvoices } from "@/app/components/invoice-state";
 import type { CompanySettings } from "@/app/lib/company-settings";
 import { bankFromIban, isValidIban, normalizeIban } from "@/app/lib/payments/iban";
+import { Check } from "lucide-react";
 import { FormEvent, useRef, useState } from "react";
 
 const sections: { title: string; text: string; fields: FieldConfig[] }[] = [
@@ -120,8 +121,9 @@ export function CompanySettingsView() {
         <button
           type="submit"
           disabled={!dirty}
-          className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
         >
+          <Check className="size-4 shrink-0" aria-hidden="true" />
           Saglabāt
         </button>
       </div>
@@ -182,6 +184,47 @@ export function CompanySettingsView() {
         ))}
 
         <section className="rounded-3xl border border-[#d3e4da] bg-white p-5 sm:p-6">
+          <h2 className="font-semibold">Piedāvājumi</h2>
+          <p className="mt-1 text-sm text-[#5f756a]">Darba likme ieliekas jaunās tāmes rindās, un to var rindā nomainīt. Termiņš un komentārs rādās piedāvājumā.</p>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium">
+              Tāmes derīguma termiņš
+              <span className={suffixRow}>
+                <input
+                  value={draft.offerValidDays}
+                  inputMode="numeric"
+                  onChange={(event) => update("offerValidDays", event.target.value.replace(/\D/g, ""))}
+                  className={suffixInput}
+                />
+                <span className={suffixLabel}>dienas</span>
+              </span>
+            </label>
+            <label className="block text-sm font-medium">
+              Darbinieka standarta stundas likme
+              <span className={suffixRow}>
+                <input
+                  value={draft.offerHourlyRate}
+                  inputMode="decimal"
+                  onChange={(event) => update("offerHourlyRate", event.target.value.replace(/[^\d,.\s]/g, ""))}
+                  className={suffixInput}
+                />
+                <span className={suffixLabel}>EUR</span>
+              </span>
+            </label>
+            <label className="block text-sm font-medium sm:col-span-2">
+              Papildus informācija piedāvājumam
+              <span className="mt-1 block text-xs font-normal text-[#5f756a]">Rādās piedāvājuma beigās.</span>
+              <textarea
+                value={draft.offerNote}
+                onChange={(event) => update("offerNote", event.target.value)}
+                rows={5}
+                className="mt-2 w-full rounded-xl border border-[#c5d9cd] bg-white px-3 py-2 font-normal outline-none focus:border-[#1a6b4a] focus:ring-4 focus:ring-[#1a6b4a]/15"
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-[#d3e4da] bg-white p-5 sm:p-6">
           <h2 className="font-semibold">Paziņojumi</h2>
           <p className="mt-1 text-sm text-[#5f756a]">Kad rēķins tuvojas termiņam vai jau ir nokavēts.</p>
           <label className="mt-5 flex cursor-pointer items-center justify-between gap-4 rounded-2xl bg-[#eef5f0] px-4 py-3 text-sm font-medium">
@@ -209,3 +252,10 @@ function ibanHint(value: string) {
 
 const fieldClass =
   "mt-2 h-11 w-full rounded-xl border border-[#c5d9cd] bg-white px-3 font-normal outline-none focus:border-[#1a6b4a] focus:ring-4 focus:ring-[#1a6b4a]/15";
+
+const suffixRow =
+  "mt-2 flex h-11 overflow-hidden rounded-xl border border-[#c5d9cd] focus-within:border-[#1a6b4a] focus-within:ring-4 focus-within:ring-[#1a6b4a]/15";
+
+const suffixInput = "min-w-0 flex-1 bg-transparent px-3 outline-none";
+
+const suffixLabel = "grid place-items-center bg-[#f4faf6] px-3 text-sm text-[#5f756a]";

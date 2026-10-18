@@ -1,7 +1,7 @@
 "use client";
 
 import { useInvoices } from "@/app/components/invoice-state";
-import { ImagePlus } from "lucide-react";
+import { Crop, ImagePlus, RefreshCw, Trash2, X } from "lucide-react";
 import { DragEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -72,10 +72,12 @@ export function PassportPhoto({
             <div className="min-w-0">
               <p className="text-sm text-[#5f756a]">Nospied foto, lai izgrieztu pases proporcijā 35×45.</p>
               <div className="mt-2 flex gap-2">
-                <button type="button" onClick={() => setCropping(true)} className="h-9 rounded-lg px-2 text-sm font-semibold text-[#1a6b4a]">
+                <button type="button" onClick={() => setCropping(true)} className="inline-flex h-9 items-center justify-center gap-2 rounded-lg px-2 text-sm font-semibold text-[#1a6b4a]">
+                  <Crop className="size-4 shrink-0" aria-hidden="true" />
                   Izgriezt
                 </button>
-                <button type="button" onClick={() => inputRef.current?.click()} className="h-9 rounded-lg px-2 text-sm font-semibold text-[#1e3a2f]">
+                <button type="button" onClick={() => inputRef.current?.click()} className="inline-flex h-9 items-center justify-center gap-2 rounded-lg px-2 text-sm font-semibold text-[#1e3a2f]">
+                  <RefreshCw className="size-4 shrink-0" aria-hidden="true" />
                   Nomainīt
                 </button>
                 <button
@@ -85,15 +87,16 @@ export function PassportPhoto({
                     setSource("");
                     onChange("");
                   }}
-                  className="h-9 rounded-lg px-2 text-sm font-semibold text-[#b42318]"
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-lg px-2 text-sm font-semibold text-[#b42318]"
                 >
+                  <Trash2 className="size-4 shrink-0" aria-hidden="true" />
                   Noņemt
                 </button>
               </div>
             </div>
           </div>
         ) : (
-          <button type="button" onClick={() => inputRef.current?.click()} className="flex w-full flex-col items-center gap-2 py-6 text-sm text-[#5f756a]">
+          <button type="button" onClick={() => inputRef.current?.click()} className="flex w-full items-center justify-center gap-2 py-6 text-sm text-[#5f756a]">
             <ImagePlus className="size-6 text-[#1a6b4a]" aria-hidden="true" />
             Ievelc attēlu vai izvēlies failu
           </button>
@@ -227,10 +230,12 @@ function CropDialog({
           ) : null}
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onCancel} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+          <button type="button" onClick={onCancel} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+            <X className="size-4 shrink-0" aria-hidden="true" />
             Atcelt
           </button>
-          <button type="button" onClick={apply} disabled={!frame} className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]">
+          <button type="button" onClick={apply} disabled={!frame} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]">
+            <Crop className="size-4 shrink-0" aria-hidden="true" />
             Izgriezt
           </button>
         </div>

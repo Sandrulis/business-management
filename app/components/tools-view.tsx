@@ -11,7 +11,7 @@ import { createLiveList } from "@/app/lib/catalog/live-list";
 import { assignInstrument, deleteInstrumentRecord, returnInstrument, saveInstrumentRecord } from "@/app/lib/catalog/repository";
 import type { EmployeeOption, Instrument } from "@/app/lib/catalog/types";
 import { formatDate, formatMoney, todayIso } from "@/app/lib/invoices/model";
-import { Info, Pencil, Trash2, Undo2, UserPlus } from "lucide-react";
+import { Check, Info, Pencil, Plus, Trash2, Undo2, UserPlus, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
@@ -162,8 +162,16 @@ export function ToolsView({
 
   return (
     <div className="animate-slide-up">
-      <h1 className="text-3xl font-semibold tracking-tight">Instrumenti</h1>
-      <p className="mt-2 max-w-2xl text-sm text-[#5f756a]">Instrumentu numurs, marka, modelis un iegāde.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Instrumenti</h1>
+          <p className="mt-2 max-w-2xl text-sm text-[#5f756a]">Instrumentu numurs, marka, modelis un iegāde.</p>
+        </div>
+        <button type="button" onClick={() => router.push("/tools/new")} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-4 text-sm font-semibold text-white hover:bg-[#0f4a34]">
+          <Plus className="size-4 shrink-0" aria-hidden="true" />
+          Pievienot
+        </button>
+      </div>
       <section className="mt-8 overflow-hidden rounded-3xl border border-[#d3e4da] bg-white">
         {rows.length === 0 ? (
           <p className="px-6 py-14 text-center text-sm text-[#5f756a]">Instrumentu vēl nav.</p>
@@ -239,14 +247,16 @@ export function ToolsView({
           onSubmit={submit}
           footer={(dismiss) => (
             <>
-              <button type="button" onClick={dismiss} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+              <button type="button" onClick={dismiss} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+                <X className="size-4 shrink-0" aria-hidden="true" />
                 Atcelt
               </button>
               <button
                 type="submit"
                 disabled={!complete || saving}
-                className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
               >
+                {editing ? <Check className="size-4 shrink-0" aria-hidden="true" /> : <Plus className="size-4 shrink-0" aria-hidden="true" />}
                 {editing ? "Saglabāt" : "Pievienot"}
               </button>
             </>
@@ -298,7 +308,17 @@ function HistoryModal({ tool, onClose }: { tool: Instrument; onClose: () => void
   const now = Date.now();
   const groups = historyGroups(tool.assignments, now);
   return (
-    <CenterDialog title="Vēsture" onClose={onClose}>
+    <RightDrawer
+      title="Vēsture"
+      hint={instrumentTitle(tool)}
+      onClose={onClose}
+      footer={(close) => (
+        <button type="button" onClick={close} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+          <X className="size-4 shrink-0" aria-hidden="true" />
+          Aizvērt
+        </button>
+      )}
+    >
       {groups.length === 0 ? (
         <p className="text-sm text-[#5f756a]">Šim instrumentam vēl nav darbību.</p>
       ) : (
@@ -325,12 +345,7 @@ function HistoryModal({ tool, onClose }: { tool: Instrument; onClose: () => void
           ))}
         </div>
       )}
-      <div className="mt-6 flex justify-end">
-        <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
-          Aizvērt
-        </button>
-      </div>
-    </CenterDialog>
+    </RightDrawer>
   );
 }
 
@@ -425,14 +440,16 @@ function AssignModal({
         )}
         {error ? <p className="mt-3 text-sm text-[#b42318]">{error}</p> : null}
         <div className="mt-6 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+          <button type="button" onClick={onClose} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+            <X className="size-4 shrink-0" aria-hidden="true" />
             Atcelt
           </button>
           <button
             type="submit"
             disabled={!employeeId}
-            className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
           >
+            <UserPlus className="size-4 shrink-0" aria-hidden="true" />
             Piesaistīt
           </button>
         </div>

@@ -5,17 +5,33 @@ import { InvoiceTable } from "@/app/components/invoice-table";
 import { useInvoices } from "@/app/components/invoice-state";
 import { formatMoney, isOverdue } from "@/app/lib/invoices/model";
 import { preparePaymentFile, type PaymentFile, type PaymentFormat } from "@/app/lib/payments/pain001";
-import { Download, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { Download, FileCode } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 export function UnpaidView() {
   const { today, invoices, settings, sites, notify } = useInvoices();
   const [choosing, setChoosing] = useState(false);
   const [partial, setPartial] = useState<Extract<PaymentFile, { ok: true }> | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const unpaid = invoices.filter((invoice) => !invoice.paid).sort((a, b) => a.dueOn.localeCompare(b.dueOn));
   const overdue = unpaid.filter((invoice) => isOverdue(invoice.dueOn, today, invoice.paid));
   const total = unpaid.reduce((sum, invoice) => sum + invoice.gross, 0);
+
+  useEffect(() => {
+    if (!choosing) return;
+    function onPointer(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) setChoosing(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setChoosing(false);
+    }
+    document.addEventListener("mousedown", onPointer);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [choosing]);
 
   function exportPayments(format: PaymentFormat) {
     setChoosing(false);
@@ -51,15 +67,55 @@ export function UnpaidView() {
             Visi apstrādātie rēķini, kas vēl nav apmaksāti, arī no citiem mēnešiem.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setChoosing(true)}
-          disabled={unpaid.length === 0}
-          className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#1a6b4a] px-4 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
-        >
-          <Download className="size-4" aria-hidden="true" />
-          Maksājuma importa fails
-        </button>
+        <div ref={menuRef} className="relative z-20 shrink-0 self-start">
+          <button
+            type="button"
+            aria-expanded={choosing}
+            aria-haspopup="menu"
+            onClick={() => setChoosing((open) => !open)}
+            disabled={unpaid.length === 0}
+            style={{
+              borderTopLeftRadius: 6,
+              borderTopRightRadius: 6,
+              borderBottomLeftRadius: choosing ? 0 : 6,
+              borderBottomRightRadius: choosing ? 0 : 6,
+            }}
+            className="relative z-10 inline-flex h-11 items-center gap-2 rounded-xl bg-[#1a6b4a] px-4 text-sm font-semibold text-white transition-[border-radius] duration-200 ease-out hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+          >
+            <Download className="size-4" aria-hidden="true" />
+            Maksājuma importa fails
+          </button>
+          <div
+            className={`absolute top-full right-0 -mt-px grid w-full transition-[grid-template-rows] duration-200 ease-out ${
+              choosing ? "grid-rows-[1fr]" : "pointer-events-none grid-rows-[0fr]"
+            }`}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <div role="menu" aria-hidden={!choosing} className="overflow-hidden rounded-b-[6px] border border-t-0 border-[#d3e4da] bg-white shadow-lg">
+                <button
+                  type="button"
+                  role="menuitem"
+                  tabIndex={choosing ? 0 : -1}
+                  onClick={() => exportPayments("fidavista")}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-semibold text-[#143028] hover:bg-[#eef5f0]"
+                >
+                  <FileCode className="size-4 shrink-0 text-[#1a6b4a]" aria-hidden="true" />
+                  FiDAViSta
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  tabIndex={choosing ? 0 : -1}
+                  onClick={() => exportPayments("pain001")}
+                  className="flex w-full items-center gap-2 border-t border-[#e4efe8] px-3 py-2.5 text-left text-sm font-semibold text-[#143028] hover:bg-[#eef5f0]"
+                >
+                  <FileCode className="size-4 shrink-0 text-[#1a6b4a]" aria-hidden="true" />
+                  ISO pain.001.001.09
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <section className="mt-8 grid gap-3 sm:grid-cols-3">
         <Stat label="Neapmaksāti" value={String(unpaid.length)} />
@@ -67,7 +123,6 @@ export function UnpaidView() {
         <Stat label="Kopā ar PVN" value={formatMoney(total)} />
       </section>
       <InvoiceTable invoices={unpaid} today={today} empty="Neapmaksātu rēķinu nav." />
-      {choosing ? <FormatChoice onCancel={() => setChoosing(false)} onChoose={exportPayments} /> : null}
       {partial ? (
         <ConfirmModal
           title="Daļai rēķinu trūkst datu"
@@ -83,61 +138,6 @@ export function UnpaidView() {
         />
       ) : null}
     </div>
-  );
-}
-
-function FormatChoice({
-  onCancel,
-  onChoose,
-}: {
-  onCancel: () => void;
-  onChoose: (format: PaymentFormat) => void;
-}) {
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") onCancel();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[100] grid place-items-center bg-[#12382c]/35 p-4 backdrop-blur-md"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onCancel();
-      }}
-    >
-      <div role="dialog" aria-modal="true" aria-labelledby="payment-format-title" className="w-full max-w-md rounded-3xl bg-white p-6 text-[#143028] shadow-2xl">
-        <div className="flex items-start justify-between gap-4">
-          <h2 id="payment-format-title" className="text-lg font-semibold">
-            Maksājuma faila formāts
-          </h2>
-          <button type="button" onClick={onCancel} className="grid size-8 shrink-0 place-items-center rounded-lg text-[#5f756a]" aria-label="Aizvērt">
-            <X className="size-4" aria-hidden="true" />
-          </button>
-        </div>
-        <div className="mt-5 grid gap-2">
-          <button
-            type="button"
-            onClick={() => onChoose("fidavista")}
-            className="rounded-2xl border border-[#d3e4da] px-4 py-3 text-left hover:bg-[#eef5f0]"
-          >
-            <span className="block text-sm font-semibold">FiDAViSta</span>
-            <span className="mt-1 block text-sm font-normal text-[#5f756a]">Latvijas banku XML. EUR maksājumi uz Latviju, Lietuvu un Igauniju.</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onChoose("pain001")}
-            className="rounded-2xl border border-[#d3e4da] px-4 py-3 text-left hover:bg-[#eef5f0]"
-          >
-            <span className="block text-sm font-semibold">ISO pain.001.001.09</span>
-            <span className="mt-1 block text-sm font-normal text-[#5f756a]">SEPA XML. Der arī maksājumiem ārpus Baltijas.</span>
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body,
   );
 }
 

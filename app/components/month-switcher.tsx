@@ -2,7 +2,7 @@
 
 import { useInvoices } from "@/app/components/invoice-state";
 import { monthOf, monthTitle, sameMonth, shiftMonth } from "@/app/lib/invoices/model";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 
 export function MonthSwitcher() {
   const { today, month, setMonth } = useInvoices();
@@ -32,9 +32,10 @@ export function MonthSwitcher() {
       {sameMonth(month, current) ? null : (
         <button
           type="button"
-          className="h-10 rounded-xl px-3 text-sm font-semibold text-[#143028] hover:bg-white"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-[#143028] hover:bg-white"
           onClick={() => setMonth(current)}
         >
+          <Calendar className="size-4 shrink-0" aria-hidden="true" />
           Šis mēnesis
         </button>
       )}

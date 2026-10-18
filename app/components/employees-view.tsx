@@ -10,7 +10,7 @@ import { createLiveList } from "@/app/lib/catalog/live-list";
 import { deleteEmployeeRecord, loadEmployeeGear, saveEmployeeRecord } from "@/app/lib/catalog/repository";
 import type { Employee, EmployeeOption, HeldClothing, HeldInstrument } from "@/app/lib/catalog/types";
 import { formatDate } from "@/app/lib/invoices/model";
-import { Pencil, Trash2 } from "lucide-react";
+import { Check, Pencil, Plus, Shirt, Trash2, Wrench, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Children, FormEvent, useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -143,8 +143,16 @@ export function EmployeesView({ initialEmployees, available }: { initialEmployee
 
   return (
     <div className="animate-slide-up">
-      <h1 className="text-3xl font-semibold tracking-tight">Darbinieki</h1>
-      <p className="mt-2 max-w-2xl text-sm text-[#5f756a]">Uzņēmuma darbinieki, līgums un foto.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Darbinieki</h1>
+          <p className="mt-2 max-w-2xl text-sm text-[#5f756a]">Uzņēmuma darbinieki, līgums un foto.</p>
+        </div>
+        <button type="button" onClick={() => router.push("/employees/new")} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-4 text-sm font-semibold text-white hover:bg-[#0f4a34]">
+          <Plus className="size-4 shrink-0" aria-hidden="true" />
+          Pievienot
+        </button>
+      </div>
       <section className="mt-8 overflow-hidden rounded-3xl border border-[#d3e4da] bg-white">
         {rows.length === 0 ? (
           <p className="px-6 py-14 text-center text-sm text-[#5f756a]">Darbinieku vēl nav.</p>
@@ -200,14 +208,16 @@ export function EmployeesView({ initialEmployees, available }: { initialEmployee
           onSubmit={submit}
           footer={(dismiss) => (
             <>
-              <button type="button" onClick={dismiss} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+              <button type="button" onClick={dismiss} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+                <X className="size-4 shrink-0" aria-hidden="true" />
                 Atcelt
               </button>
               <button
                 type="submit"
                 disabled={!complete || saving}
-                className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
               >
+                {editing ? <Check className="size-4 shrink-0" aria-hidden="true" /> : <Plus className="size-4 shrink-0" aria-hidden="true" />}
                 {editing ? "Saglabāt" : "Pievienot"}
               </button>
             </>
@@ -315,10 +325,12 @@ function EmployeeProfile({ employee, onClose }: { employee: Employee; onClose: (
         </dl>
       </div>
       <div className="grid grid-cols-2 rounded-xl bg-[#eef5f0] p-1" role="tablist">
-        <button type="button" role="tab" aria-selected={tab === "instruments"} onClick={() => setTab("instruments")} className={tabClass(tab === "instruments")}>
+        <button type="button" role="tab" aria-selected={tab === "instruments"} onClick={() => setTab("instruments")} className={`inline-flex items-center justify-center gap-2 ${tabClass(tab === "instruments")}`}>
+          <Wrench className="size-4 shrink-0" aria-hidden="true" />
           Instrumenti
         </button>
-        <button type="button" role="tab" aria-selected={tab === "clothing"} onClick={() => setTab("clothing")} className={tabClass(tab === "clothing")}>
+        <button type="button" role="tab" aria-selected={tab === "clothing"} onClick={() => setTab("clothing")} className={`inline-flex items-center justify-center gap-2 ${tabClass(tab === "clothing")}`}>
+          <Shirt className="size-4 shrink-0" aria-hidden="true" />
           Apģērbi
         </button>
       </div>

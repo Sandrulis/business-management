@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Check, Download, Trash2, X, type LucideIcon } from "lucide-react";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
@@ -23,15 +23,17 @@ export function ConfirmModal({
 }) {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape" && !pending) onCancel();
+      if (event.key !== "Escape") return;
+      event.stopImmediatePropagation();
+      if (!pending) onCancel();
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [onCancel, pending]);
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] grid place-items-center bg-[#12382c]/35 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-[130] grid place-items-center bg-[#12382c]/35 p-4 backdrop-blur-md"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !pending) onCancel();
       }}
@@ -62,8 +64,9 @@ export function ConfirmModal({
             type="button"
             onClick={onCancel}
             disabled={pending}
-            className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f] disabled:text-[#5f756a]"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f] disabled:text-[#5f756a]"
           >
+            <X className="size-4 shrink-0" aria-hidden="true" />
             Atcelt
           </button>
           <button
@@ -72,10 +75,11 @@ export function ConfirmModal({
             disabled={pending}
             className={
               tone === "primary"
-                ? "h-11 rounded-xl bg-[#1a6b4a] px-4 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
-                : "h-11 rounded-xl bg-[#b42318] px-4 text-sm font-semibold text-white hover:bg-[#8a1c14] disabled:bg-[#e7c4c1]"
+                ? "inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-4 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+                : "inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#b42318] px-4 text-sm font-semibold text-white hover:bg-[#8a1c14] disabled:bg-[#e7c4c1]"
             }
           >
+            <ConfirmIcon label={confirmLabel} />
             {confirmLabel}
           </button>
         </div>
@@ -83,4 +87,9 @@ export function ConfirmModal({
     </div>,
     document.body,
   );
+}
+
+function ConfirmIcon({ label }: { label: string }) {
+  const Icon: LucideIcon = label === "Lejupielādēt" ? Download : label === "Dzēst" || label === "Noņemt" ? Trash2 : Check;
+  return <Icon className="size-4 shrink-0" aria-hidden="true" />;
 }

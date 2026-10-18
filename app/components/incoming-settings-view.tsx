@@ -2,7 +2,7 @@
 
 import { useInvoices } from "@/app/components/invoice-state";
 import type { CompanySettings, Mailbox } from "@/app/lib/company-settings";
-import { Eye, EyeOff } from "lucide-react";
+import { Check, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 export function IncomingSettingsView() {
@@ -74,8 +74,9 @@ export function IncomingSettingsView() {
         <button
           type="submit"
           disabled={!dirty}
-          className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
         >
+          <Check className="size-4 shrink-0" aria-hidden="true" />
           Saglabāt
         </button>
       </div>
@@ -135,8 +136,9 @@ export function IncomingSettingsView() {
                 mailboxes: [...current.mailboxes, { id: crypto.randomUUID(), email: "", password: "" }],
               }))
             }
-            className="h-11 shrink-0 rounded-xl px-4 text-sm font-semibold text-[#1a6b4a]"
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1a6b4a]"
           >
+            <Plus className="size-4 shrink-0" aria-hidden="true" />
             Pievienot e-pastu
           </button>
         </div>
@@ -211,8 +213,9 @@ export function IncomingSettingsView() {
                     mailboxes: current.mailboxes.filter((entry) => entry.id !== mailbox.id),
                   }))
                 }
-                className="h-11 rounded-xl px-3 text-sm font-semibold text-[#b42318]"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-[#b42318]"
               >
+                <Trash2 className="size-4 shrink-0" aria-hidden="true" />
                 Noņemt
               </button>
             </div>

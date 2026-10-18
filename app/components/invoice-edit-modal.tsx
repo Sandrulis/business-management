@@ -5,17 +5,18 @@ import { DateField } from "@/app/components/date-field";
 import { EmailFrame } from "@/app/components/email-frame";
 import { InvoicePreviewModal } from "@/app/components/invoice-preview-modal";
 import { useInvoices } from "@/app/components/invoice-state";
+import { useOfferCategories } from "@/app/components/use-offer-categories";
 import { RightDrawer } from "@/app/components/right-drawer";
 import { formatFileSize } from "@/app/lib/invoices/files";
 import { formatDate, vatGross, type Invoice } from "@/app/lib/invoices/model";
 import { isValidIban } from "@/app/lib/payments/iban";
-import { FileText } from "lucide-react";
+import { Check, FileText, X } from "lucide-react";
 import { useRef, useState } from "react";
 
 export function InvoiceEditModal({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
-  const { notify, saveInvoice, sites, works } = useInvoices();
+  const { notify, saveInvoice, sites } = useInvoices();
   const [objectId, setObjectId] = useState(invoice.objectId ?? "");
-  const [workId, setWorkId] = useState(invoice.workId ?? "");
+  const [categoryId, setCategoryId] = useState(invoice.categoryId);
   const [number, setNumber] = useState(invoice.number);
   const [issuedOn, setIssuedOn] = useState(invoice.issuedOn);
   const [dueOn, setDueOn] = useState(invoice.dueOn);
@@ -27,12 +28,13 @@ export function InvoiceEditModal({ invoice, onClose }: { invoice: Invoice; onClo
   const [preview, setPreview] = useState(false);
   const dismissRef = useRef<() => void>(() => {});
   const site = sites.find((entry) => entry.id === objectId) ?? null;
-  const work = works.find((entry) => entry.id === workId) ?? null;
+  const categories = useOfferCategories(objectId);
+  const category = categories.find((entry) => entry.id === categoryId) ?? null;
   const netValue = parseAmount(net);
   const grossValue = parseAmount(gross);
   const dirty =
     objectId !== (invoice.objectId ?? "") ||
-    workId !== (invoice.workId ?? "") ||
+    categoryId !== invoice.categoryId ||
     number !== invoice.number ||
     issuedOn !== invoice.issuedOn ||
     dueOn !== invoice.dueOn ||
@@ -41,7 +43,7 @@ export function InvoiceEditModal({ invoice, onClose }: { invoice: Invoice; onClo
   const canSave =
     !saving &&
     site != null &&
-    work != null &&
+    category != null &&
     number.trim() !== "" &&
     issuedOn.trim() !== "" &&
     dueOn.trim() !== "" &&
@@ -60,7 +62,7 @@ export function InvoiceEditModal({ invoice, onClose }: { invoice: Invoice; onClo
   }
 
   async function save() {
-    if (!canSave || !site || !work) return;
+    if (!canSave || !site || !category) return;
     setSaving(true);
     const result = await saveInvoice({
       ...invoice,
@@ -68,8 +70,8 @@ export function InvoiceEditModal({ invoice, onClose }: { invoice: Invoice; onClo
       client: site.customer,
       objectId: site.id,
       objectName: site.address,
-      workId: work.id,
-      workName: work.name,
+      categoryId: category.id,
+      categoryName: category.name,
       issuedOn,
       dueOn,
       net: netValue,
@@ -97,10 +99,12 @@ export function InvoiceEditModal({ invoice, onClose }: { invoice: Invoice; onClo
       dismissRef={dismissRef}
       footer={(close) => (
         <>
-          <button type="button" onClick={close} disabled={saving} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f] disabled:text-[#5f756a]">
+          <button type="button" onClick={close} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f] disabled:text-[#5f756a]">
+            <X className="size-4 shrink-0" aria-hidden="true" />
             Atcelt
           </button>
-          <button type="button" onClick={() => void save()} disabled={!canSave} className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]">
+          <button type="button" onClick={() => void save()} disabled={!canSave} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]">
+            <Check className="size-4 shrink-0" aria-hidden="true" />
             {saving ? "Saglabā..." : "Saglabāt"}
           </button>
         </>
@@ -116,7 +120,14 @@ export function InvoiceEditModal({ invoice, onClose }: { invoice: Invoice; onClo
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium">
               Klients
-              <select value={objectId} onChange={(event) => setObjectId(event.target.value)} className={fieldClass}>
+              <select
+                value={objectId}
+                onChange={(event) => {
+                  setObjectId(event.target.value);
+                  setCategoryId("");
+                }}
+                className={fieldClass}
+              >
                 <option value="">Izvēlēties klientu</option>
                 {sites.map((entry) => (
                   <option key={entry.id} value={entry.id}>{entry.customer}, {entry.address}</option>
@@ -128,13 +139,16 @@ export function InvoiceEditModal({ invoice, onClose }: { invoice: Invoice; onClo
               ) : null}
             </label>
             <label className="block text-sm font-medium">
-              Darbs
-              <select value={workId} onChange={(event) => setWorkId(event.target.value)} className={fieldClass}>
-                <option value="">Izvēlēties darbu</option>
-                {works.map((entry) => (
+              Pozīcija
+              <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} disabled={!site} className={fieldClass}>
+                <option value="">{site ? "Izvēlēties pozīciju" : "Vispirms izvēlies klientu"}</option>
+                {categories.map((entry) => (
                   <option key={entry.id} value={entry.id}>{entry.name}</option>
                 ))}
               </select>
+              {site && categories.length === 0 ? (
+                <span className="mt-1 block text-xs font-normal text-[#5f756a]">Šim klientam piedāvājumā nav kategoriju.</span>
+              ) : null}
             </label>
             <label className="block text-sm font-medium">
               Rēķina numurs

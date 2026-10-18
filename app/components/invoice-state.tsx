@@ -7,18 +7,15 @@ import {
   type Invoice,
   type MonthKey,
   type Site,
-  type Work,
 } from "@/app/lib/invoices/model";
 import {
   createDataClient,
   deleteSite,
-  deleteWork,
   insertInvoice,
   removeInboxItem,
   setInvoicePaid,
   updateInvoice,
   saveSite,
-  saveWork,
 } from "@/app/lib/invoices/repository";
 import { bankFromIban, isValidIban, normalizeIban } from "@/app/lib/payments/iban";
 import { saveCompanySettings } from "@/app/lib/settings/save-settings";
@@ -43,8 +40,8 @@ export type Approval = {
   client: string;
   objectId: string;
   objectName: string;
-  workId: string;
-  workName: string;
+  categoryId: string;
+  categoryName: string;
   number: string;
   issuedOn: string;
   net: number;
@@ -67,12 +64,9 @@ type InvoiceContextValue = {
   addUpload: (file: File) => Promise<void>;
   discardInbox: (id: string) => Promise<{ ok: true } | { ok: false; message: string }>;
   sites: Site[];
-  works: Work[];
   loadUnreadMail: () => Promise<void>;
   saveSite: (site: Site) => Promise<{ ok: true } | { ok: false; message: string }>;
   removeSite: (id: string) => Promise<{ ok: true } | { ok: false; message: string }>;
-  saveWorkItem: (work: Work) => Promise<{ ok: true } | { ok: false; message: string }>;
-  removeWork: (id: string) => Promise<{ ok: true } | { ok: false; message: string }>;
   settings: CompanySettings;
   saveSettings: (settings: CompanySettings) => Promise<{ ok: true; settings: CompanySettings } | { ok: false; message: string }>;
 };
@@ -85,7 +79,6 @@ export function InvoiceProvider({
   invoices: initialInvoices,
   inbox: initialInbox,
   sites: initialSites,
-  works: initialWorks,
   settings: initialSettings,
   initialNotice,
   children,
@@ -95,7 +88,6 @@ export function InvoiceProvider({
   invoices: Invoice[];
   inbox: InboxItem[];
   sites: Site[];
-  works: Work[];
   settings: CompanySettings;
   initialNotice: string | null;
   children: ReactNode;
@@ -104,7 +96,6 @@ export function InvoiceProvider({
   const [invoices, setInvoices] = useState(initialInvoices);
   const [inbox, setInbox] = useState(initialInbox);
   const [sites, setSites] = useState(initialSites);
-  const [works, setWorks] = useState(initialWorks);
   const [notices, setNotices] = useState<Notice[]>(
     initialNotice ? [{ id: "initial", text: initialNotice, tone: "error" }] : [],
   );
@@ -122,7 +113,6 @@ export function InvoiceProvider({
       invoices,
       inbox,
       sites,
-      works,
       notices,
       dismissNotice: (id) => setNotices((current) => current.filter((entry) => entry.id !== id)),
       notify: pushNotice,
@@ -138,8 +128,8 @@ export function InvoiceProvider({
           client: approval.client,
           objectId: approval.objectId,
           objectName: approval.objectName,
-          workId: approval.workId,
-          workName: approval.workName,
+          categoryId: approval.categoryId,
+          categoryName: approval.categoryName,
           net: approval.net,
           gross: approval.gross,
           issuedOn: approval.issuedOn,
@@ -299,35 +289,6 @@ export function InvoiceProvider({
         setSites((current) => current.filter((entry) => entry.id !== id));
         return { ok: true };
       },
-      saveWorkItem: async (work) => {
-        const next = { ...work, name: work.name.trim() };
-        if (!next.name) return { ok: false, message: "Norādi darba nosaukumu." };
-        if (connected) {
-          const supabase = createDataClient();
-          if (!supabase) return { ok: false, message: "Datubāze nav pieslēgta." };
-          const saved = await saveWork(supabase, next);
-          if (!saved.id) return { ok: false, message: saved.error ?? "Darbu neizdevās saglabāt." };
-          next.id = saved.id;
-        } else if (!next.id) {
-          next.id = crypto.randomUUID();
-        }
-        setWorks((current) => {
-          const exists = current.some((entry) => entry.id === next.id);
-          const list = exists ? current.map((entry) => (entry.id === next.id ? next : entry)) : [next, ...current];
-          return list.sort((a, b) => a.name.localeCompare(b.name, "lv"));
-        });
-        return { ok: true };
-      },
-      removeWork: async (id) => {
-        if (connected) {
-          const supabase = createDataClient();
-          if (!supabase) return { ok: false, message: "Datubāze nav pieslēgta." };
-          const error = await deleteWork(supabase, id);
-          if (error) return { ok: false, message: error };
-        }
-        setWorks((current) => current.filter((entry) => entry.id !== id));
-        return { ok: true };
-      },
       settings,
       saveSettings: async (next) => {
         const result = await saveCompanySettings(next);
@@ -336,7 +297,7 @@ export function InvoiceProvider({
         return result;
       },
     }),
-    [connected, inbox, invoices, month, notices, pushNotice, settings, sites, today, works],
+    [connected, inbox, invoices, month, notices, pushNotice, settings, sites, today],
   );
 
   return <InvoiceContext.Provider value={value}>{children}</InvoiceContext.Provider>;

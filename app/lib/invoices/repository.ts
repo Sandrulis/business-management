@@ -1,5 +1,5 @@
 import { defaultCompanySettings, type CompanySettings } from "@/app/lib/company-settings";
-import { type InboxItem, type Invoice, type Site, type Work } from "@/app/lib/invoices/model";
+import { type InboxItem, type Invoice, type Site } from "@/app/lib/invoices/model";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export type DeskData = {
@@ -7,7 +7,6 @@ export type DeskData = {
   invoices: Invoice[];
   inbox: InboxItem[];
   sites: Site[];
-  works: Work[];
   settings: CompanySettings;
   notice: string | null;
 };
@@ -18,10 +17,10 @@ type InvoiceRow = {
   supplier: string;
   supplier_iban?: string | null;
   client: string;
-  object_id: string | null;
-  object_name: string;
-  work_id: string | null;
-  work_name: string | null;
+    object_id: string | null;
+    object_name: string;
+    category_id?: string | null;
+    category_name?: string | null;
   cost_type: string;
   net: number | string;
   gross: number | string;
@@ -78,6 +77,9 @@ type SettingsRow = {
   overdue_reminders: boolean;
   mailbox_email: string;
   mailbox_password: string;
+  offer_hourly_rate?: string | null;
+  offer_valid_days?: string | null;
+  offer_note?: string | null;
 };
 
 export function createDataClient() {
@@ -93,23 +95,21 @@ export async function loadDeskData(): Promise<DeskData> {
     invoices: [],
     inbox: [],
     sites: [],
-    works: [],
     settings: defaultCompanySettings,
     notice: "Datubāze nav pieslēgta.",
   };
   const supabase = createDataClient();
   if (!supabase) return empty;
 
-  const [invoices, inbox, settings, sites, works, mailboxes] = await Promise.all([
+  const [invoices, inbox, settings, sites, mailboxes] = await Promise.all([
     supabase.from("invoices").select("*").order("issued_on", { ascending: false }),
     supabase.from("inbox_items").select("*").eq("unread", true).order("received_on", { ascending: false }),
     supabase.from("company_settings").select("*").eq("id", 1).maybeSingle(),
     supabase.from("sites").select("id, address, customer, iban, bank_name").order("customer"),
-    supabase.from("works").select("id, name").order("name"),
     supabase.from("mailboxes").select("id, email, password, sort_order").order("sort_order"),
   ]);
 
-  if (invoices.error || inbox.error || settings.error || sites.error || works.error || mailboxes.error) {
+  if (invoices.error || inbox.error || settings.error || sites.error || mailboxes.error) {
     return {
       ...empty,
       notice: "Datubāze nav pieejama.",
@@ -121,7 +121,6 @@ export async function loadDeskData(): Promise<DeskData> {
     invoices: (invoices.data as InvoiceRow[]).map(toInvoice),
     inbox: (inbox.data as InboxRow[]).map(toInbox),
     sites: ((sites.data ?? []) as SiteRow[]).map(toSite),
-    works: (works.data ?? []) as Work[],
     settings: settings.data
       ? toSettings(settings.data as SettingsRow, (mailboxes.data ?? []) as MailboxRow[])
       : defaultCompanySettings,
@@ -137,8 +136,8 @@ export function invoiceInsert(invoice: Invoice) {
     client: invoice.client,
     object_id: invoice.objectId,
     object_name: invoice.objectName,
-    work_id: invoice.workId,
-    work_name: invoice.workName,
+    category_id: invoice.categoryId,
+    category_name: invoice.categoryName,
     cost_type: "",
     net: invoice.net,
     gross: invoice.gross,
@@ -192,6 +191,9 @@ export function settingsUpdate(settings: CompanySettings) {
     overdue_reminders: settings.overdueReminders,
     mailbox_email: settings.mailboxEmail,
     mailbox_password: settings.mailboxPassword,
+    offer_hourly_rate: settings.offerHourlyRate ?? "",
+    offer_valid_days: settings.offerValidDays ?? "",
+    offer_note: settings.offerNote ?? "",
     updated_at: new Date().toISOString(),
   };
 }
@@ -210,8 +212,8 @@ export async function updateInvoice(supabase: SupabaseClient, invoice: Invoice) 
       client: invoice.client,
       object_id: invoice.objectId,
       object_name: invoice.objectName,
-      work_id: invoice.workId,
-      work_name: invoice.workName,
+      category_id: invoice.categoryId,
+      category_name: invoice.categoryName,
       net: invoice.net,
       gross: invoice.gross,
       issued_on: invoice.issuedOn,
@@ -268,19 +270,6 @@ export async function deleteSite(supabase: SupabaseClient, id: string) {
   return error?.message ?? null;
 }
 
-export async function saveWork(supabase: SupabaseClient, work: Work) {
-  const query = work.id
-    ? supabase.from("works").update({ name: work.name }).eq("id", work.id).select("id").single()
-    : supabase.from("works").insert({ name: work.name }).select("id").single();
-  const { data, error } = await query;
-  return { id: data?.id as string | undefined, error: error?.message ?? null };
-}
-
-export async function deleteWork(supabase: SupabaseClient, id: string) {
-  const { error } = await supabase.from("works").delete().eq("id", id);
-  return error?.message ?? null;
-}
-
 export async function updateSettings(supabase: SupabaseClient, settings: CompanySettings) {
   const { error } = await supabase.from("company_settings").update(settingsUpdate(settings)).eq("id", 1);
   return error?.message ?? null;
@@ -295,8 +284,8 @@ function toInvoice(row: InvoiceRow): Invoice {
     client: row.client,
     objectId: row.object_id,
     objectName: row.object_name,
-    workId: row.work_id,
-    workName: row.work_name ?? "",
+    categoryId: row.category_id ?? "",
+    categoryName: row.category_name ?? "",
     net: Number(row.net),
     gross: Number(row.gross),
     issuedOn: row.issued_on,
@@ -356,5 +345,8 @@ function toSettings(row: SettingsRow, mailboxes: MailboxRow[]): CompanySettings 
     mailboxEmail: first?.email ?? "",
     mailboxPassword: first?.password ?? "",
     mailboxes: list,
+    offerHourlyRate: row.offer_hourly_rate ?? "",
+    offerValidDays: row.offer_valid_days ?? "",
+    offerNote: row.offer_note ?? "",
   };
 }

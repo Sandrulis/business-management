@@ -11,6 +11,7 @@ export function RightDrawer({
   title,
   hint,
   wide = false,
+  panelClassName,
   beside,
   onClose,
   beforeClose,
@@ -18,10 +19,12 @@ export function RightDrawer({
   onSubmit,
   children,
   footer,
+  front = false,
 }: {
   title: string;
   hint: string;
   wide?: boolean;
+  panelClassName?: string;
   beside?: number;
   onClose: () => void;
   beforeClose?: () => boolean;
@@ -29,6 +32,7 @@ export function RightDrawer({
   onSubmit?: (event: FormEvent<HTMLFormElement>) => void | false | Promise<void | false>;
   children: ReactNode;
   footer?: (close: () => void) => ReactNode;
+  front?: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -92,11 +96,15 @@ export function RightDrawer({
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") requestClose();
+      if (event.key !== "Escape") return;
+      if (document.querySelector("[role='dialog']")) return;
+      if (front || beside != null) event.stopImmediatePropagation();
+      requestClose();
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+    const capture = front || beside != null;
+    window.addEventListener("keydown", onKey, capture);
+    return () => window.removeEventListener("keydown", onKey, capture);
+  }, [front, beside]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -110,7 +118,8 @@ export function RightDrawer({
 
   return createPortal(
     <div
-      className={beside == null ? "fixed inset-0 z-[90]" : "fixed inset-y-0 left-0 z-[91] overflow-hidden"}
+      className={front ? "fixed inset-0 z-[110]" : beside == null ? "fixed inset-0" : "fixed inset-y-0 left-0 z-[80] overflow-hidden"}
+      data-drawer-front={front ? "" : undefined}
       style={beside == null ? undefined : { right: offset }}
     >
       <button
@@ -118,12 +127,12 @@ export function RightDrawer({
         type="button"
         aria-label="Aizvērt"
         onClick={requestClose}
-        className={beside == null ? "absolute inset-0 bg-[#12382c]/35 backdrop-blur-md" : "absolute inset-0"}
+        className={beside == null ? `absolute inset-0 bg-[#12382c]/35 backdrop-blur-md ${front ? "" : "z-[70]"}` : "absolute inset-0"}
       />
       <form
         ref={panelRef}
         onSubmit={handleSubmit}
-        className={`absolute inset-y-0 right-0 flex w-full flex-col bg-white shadow-2xl ${beside == null ? "" : "border-r border-[#9fb8ac]"} ${wide ? "max-w-[720px]" : "max-w-[440px]"}`}
+        className={`absolute inset-y-0 right-0 flex w-full flex-col border-[#9fb8ac] bg-white ${beside == null ? "z-[90] border-l shadow-2xl" : "border-r shadow-[-16px_0_32px_rgba(18,56,44,0.12)]"} ${panelClassName ?? (wide ? "max-w-[720px]" : "max-w-[440px]")}`}
       >
         <div className="flex items-start justify-between gap-3 border-b border-[#d3e4da] px-5 py-4">
           <div>

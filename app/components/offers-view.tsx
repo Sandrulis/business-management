@@ -4,6 +4,7 @@ import { ConfirmModal } from "@/app/components/confirm-modal";
 import { DateField } from "@/app/components/date-field";
 import { useInvoices } from "@/app/components/invoice-state";
 import { addDays, formatDate, formatMoney } from "@/app/lib/invoices/model";
+import { Plus, Trash2 } from "lucide-react";
 import { FormEvent, useState } from "react";
 
 const STATUSES = ["Melnraksts", "Nosūtīts", "Apstiprināts"] as const;
@@ -149,8 +150,9 @@ export function OffersView() {
           <button
             type="submit"
             disabled={!complete}
-            className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
           >
+            <Plus className="size-4 shrink-0" aria-hidden="true" />
             Pievienot
           </button>
         </div>
@@ -175,7 +177,8 @@ export function OffersView() {
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(offer.status)}`}>{offer.status}</span>
-                  <button type="button" onClick={() => setConfirmOffer(offer)} className="h-10 rounded-xl px-3 text-sm font-semibold text-[#b42318]">
+                  <button type="button" onClick={() => setConfirmOffer(offer)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-[#b42318]">
+                    <Trash2 className="size-4 shrink-0" aria-hidden="true" />
                     Dzēst
                   </button>
                 </div>

@@ -2,8 +2,10 @@
 
 import { DateField } from "@/app/components/date-field";
 import { useInvoices } from "@/app/components/invoice-state";
+import { useOfferCategories } from "@/app/components/use-offer-categories";
 import { RightDrawer } from "@/app/components/right-drawer";
 import { addDays, formatDate, formatMoney } from "@/app/lib/invoices/model";
+import { Plus, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
@@ -16,7 +18,7 @@ type DraftInvoice = {
   dueOn: string;
   net: number;
   gross: number;
-  workName: string;
+  categoryName: string;
 };
 
 function todayIso() {
@@ -42,10 +44,9 @@ const draftInvoices: DraftInvoice[] = [];
 export function OutgoingInvoicesView() {
   const pathname = usePathname();
   const router = useRouter();
-  const { sites, works, settings } = useInvoices();
+  const { sites, settings } = useInvoices();
   const creating = pathname === "/outgoing_invoices/new";
   const clients = [...sites].sort((a, b) => a.customer.localeCompare(b.customer, "lv"));
-  const workOptions = [...works].sort((a, b) => a.name.localeCompare(b.name, "lv"));
   const [invoices, setInvoices] = useState<DraftInvoice[]>(() => draftInvoices);
   const [clientId, setClientId] = useState("");
   const [number, setNumber] = useState("");
@@ -53,7 +54,8 @@ export function OutgoingInvoicesView() {
   const [dueOn, setDueOn] = useState(addDays(todayIso(), Number(settings.paymentDays) || 14));
   const [net, setNet] = useState("");
   const [gross, setGross] = useState("");
-  const [workId, setWorkId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const categories = useOfferCategories(clientId);
 
   const parsedNet = parseAmount(net);
   const parsedGross = parseAmount(gross);
@@ -71,11 +73,11 @@ export function OutgoingInvoicesView() {
     setGross(amountText(Math.round(value * (1 + rate / 100) * 100) / 100));
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: FormEvent<HTMLFormElement>): false {
     event.preventDefault();
     if (!complete || parsedNet === null || parsedGross === null) return false;
     const client = clients.find((site) => site.id === clientId);
-    const work = workOptions.find((item) => item.id === workId);
+    const category = categories.find((item) => item.id === categoryId);
     const next = {
       id: crypto.randomUUID(),
       clientId,
@@ -85,7 +87,7 @@ export function OutgoingInvoicesView() {
       dueOn,
       net: parsedNet,
       gross: parsedGross,
-      workName: work?.name ?? "",
+      categoryName: category?.name ?? "",
     };
     draftInvoices.unshift(next);
     setInvoices([...draftInvoices]);
@@ -93,13 +95,22 @@ export function OutgoingInvoicesView() {
     setNumber("");
     setNet("");
     setGross("");
-    setWorkId("");
+    setCategoryId("");
+    return false;
   }
 
   return (
     <div className="animate-slide-up">
-      <h1 className="text-3xl font-semibold tracking-tight">Izejošie rēķini</h1>
-      <p className="mt-2 max-w-2xl text-sm text-[#5f756a]">Rēķini, ko uzņēmums izraksta klientiem.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Izejošie rēķini</h1>
+          <p className="mt-2 max-w-2xl text-sm text-[#5f756a]">Rēķini, ko uzņēmums izraksta klientiem.</p>
+        </div>
+        <button type="button" onClick={() => router.push("/outgoing_invoices/new")} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-4 text-sm font-semibold text-white hover:bg-[#0f4a34]">
+          <Plus className="size-4 shrink-0" aria-hidden="true" />
+          Pievienot
+        </button>
+      </div>
 
       <section className="mt-8 overflow-hidden rounded-3xl border border-[#d3e4da] bg-white">
         {invoices.length === 0 ? (
@@ -113,7 +124,7 @@ export function OutgoingInvoicesView() {
                   <p className="mt-1 text-sm text-[#5f756a]">{invoice.clientName}</p>
                   <p className="mt-1 text-sm text-[#5f756a]">
                     {formatDate(invoice.issuedOn)} līdz {formatDate(invoice.dueOn)}
-                    {invoice.workName ? `, ${invoice.workName}` : ""}
+                    {invoice.categoryName ? `, ${invoice.categoryName}` : ""}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
@@ -134,14 +145,16 @@ export function OutgoingInvoicesView() {
           onSubmit={submit}
           footer={(dismiss) => (
             <>
-              <button type="button" onClick={dismiss} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+              <button type="button" onClick={dismiss} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+                <X className="size-4 shrink-0" aria-hidden="true" />
                 Atcelt
               </button>
               <button
                 type="submit"
                 disabled={!complete}
-                className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
               >
+                <Plus className="size-4 shrink-0" aria-hidden="true" />
                 Izveidot
               </button>
             </>
@@ -149,7 +162,14 @@ export function OutgoingInvoicesView() {
         >
                   <label className="block text-sm font-medium">
                     Klients
-                    <select value={clientId} onChange={(event) => setClientId(event.target.value)} className={fieldClass}>
+                    <select
+                      value={clientId}
+                      onChange={(event) => {
+                        setClientId(event.target.value);
+                        setCategoryId("");
+                      }}
+                      className={fieldClass}
+                    >
                       <option value="">Izvēlies klientu</option>
                       {clients.map((site) => (
                         <option key={site.id} value={site.id}>
@@ -180,12 +200,12 @@ export function OutgoingInvoicesView() {
                     <input value={gross} onChange={(event) => setGross(event.target.value)} inputMode="decimal" className={fieldClass} placeholder="0,00" />
                   </label>
                   <label className="block text-sm font-medium">
-                    Darbs
-                    <select value={workId} onChange={(event) => setWorkId(event.target.value)} className={fieldClass}>
-                      <option value="">Bez darba</option>
-                      {workOptions.map((work) => (
-                        <option key={work.id} value={work.id}>
-                          {work.name}
+                    Pozīcija
+                    <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} disabled={!clientId} className={fieldClass}>
+                      <option value="">{clientId ? "Izvēlies pozīciju" : "Vispirms izvēlies klientu"}</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
                         </option>
                       ))}
                     </select>

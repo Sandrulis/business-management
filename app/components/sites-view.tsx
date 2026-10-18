@@ -1,19 +1,82 @@
 "use client";
 
 import { ConfirmModal } from "@/app/components/confirm-modal";
+import { OfferEditor } from "@/app/components/offer-editor";
 import { useInvoices } from "@/app/components/invoice-state";
+import { RightDrawer } from "@/app/components/right-drawer";
+import { Tooltip } from "@/app/components/tooltip";
 import type { Site } from "@/app/lib/invoices/model";
 import { bankFromIban, isValidIban, normalizeIban } from "@/app/lib/payments/iban";
-import { FormEvent, useState } from "react";
+import { copyOfferDocument, offerNeedsPriceReview } from "@/app/lib/offers/model";
+import { loadOffer, loadOfferDocuments, saveOffer } from "@/app/lib/offers/repository";
+import { loadPriceCatalog } from "@/app/lib/prices/repository";
+import { Check, CircleAlert, Copy, FileCheck, FilePlus, FileText, Pencil, Plus, Trash2, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 const emptySite = (): Site => ({ id: "", address: "", customer: "", iban: "", bankName: "" });
 
 export function SitesView() {
+  const pathname = usePathname();
+  const router = useRouter();
   const { sites, saveSite, removeSite, notify } = useInvoices();
+  const creating = pathname === "/clients/new";
   const [draft, setDraft] = useState<Site>(emptySite);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [confirmSite, setConfirmSite] = useState<Site | null>(null);
+  const [offerSite, setOfferSite] = useState<Site | null>(null);
+  const [offerMarks, setOfferMarks] = useState<Record<string, OfferMark>>({});
+  const [reviewSiteIds, setReviewSiteIds] = useState<string[]>([]);
+  const [copySite, setCopySite] = useState<Site | null>(null);
+  const [copyingId, setCopyingId] = useState<string | null>(null);
+
+  async function refreshOffers() {
+    const [offers, catalog] = await Promise.all([loadOfferDocuments(), loadPriceCatalog()]);
+    setOfferMarks(
+      Object.fromEntries(
+        offers.map((row) => [
+          row.siteId,
+          {
+            fixed: Boolean(row.document.fixedAt),
+            extras: row.document.extras.length,
+            openExtra: row.document.extras.some((extra) => !extra.fixedAt),
+          },
+        ]),
+      ),
+    );
+    if (!catalog.ok) {
+      setReviewSiteIds([]);
+      return;
+    }
+    setReviewSiteIds(offers.filter((row) => offerNeedsPriceReview(row.document, catalog.positions)).map((row) => row.siteId));
+  }
+
+  useEffect(() => {
+    void refreshOffers();
+  }, []);
+
+  async function copyOffer(sourceId: string) {
+    if (!copySite || copyingId) return;
+    setCopyingId(sourceId);
+    const loaded = await loadOffer(sourceId);
+    if (!loaded.ok) {
+      setCopyingId(null);
+      notify(loaded.message, "error");
+      return;
+    }
+    const saved = await saveOffer(copySite.id, copyOfferDocument(loaded.document));
+    setCopyingId(null);
+    if (!saved.ok) {
+      notify(saved.message, "error");
+      return;
+    }
+    const target = copySite;
+    setCopySite(null);
+    await refreshOffers();
+    setOfferSite(target);
+  }
 
   const editing = sites.find((site) => site.id === editingId) ?? null;
   const ibanValue = normalizeIban(draft.iban);
@@ -24,14 +87,16 @@ export function SitesView() {
       ibanValue !== normalizeIban(editing.iban)
     : false;
 
+  function close() {
+    const wasEditing = editingId !== null;
+    setEditingId(null);
+    setDraft(emptySite());
+    if (!wasEditing) router.push("/clients");
+  }
+
   function beginEdit(site: Site) {
     setEditingId(site.id);
     setDraft(site);
-  }
-
-  function cancelEdit() {
-    setEditingId(null);
-    setDraft(emptySite());
   }
 
   function applyIban(raw: string) {
@@ -41,16 +106,16 @@ export function SitesView() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (editing ? !editDirty || !complete : !complete) return;
+    if (!complete || pendingId !== null || (editing ? !editDirty : false)) return false;
     setPendingId(editing?.id ?? "new");
     const result = await saveSite({ ...draft, iban: ibanValue });
     setPendingId(null);
     if (!result.ok) {
       notify(result.message, "error");
-      return;
+      return false;
     }
     notify(editing ? "Klients saglabāts." : "Klients pievienots.", "ok");
-    cancelEdit();
+    if (!editing) setDraft(emptySite());
   }
 
   async function remove(id: string) {
@@ -63,19 +128,114 @@ export function SitesView() {
     }
     notify("Klients dzēsts.", "ok");
     setConfirmSite(null);
-    if (editingId === id) cancelEdit();
+    if (editingId === id) close();
   }
 
   return (
     <div className="animate-slide-up">
-      <h1 className="text-3xl font-semibold tracking-tight">Klienti</h1>
-      <p className="mt-2 max-w-2xl text-sm text-[#5f756a]">
-        Nosaukums, adrese un IBAN vajag maksājuma failam. Banku nolasa no IBAN.
-      </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Klienti</h1>
+          <p className="mt-2 max-w-2xl text-sm text-[#5f756a]">
+            Nosaukums, adrese un IBAN vajag maksājuma failam. Banku nolasa no IBAN.
+          </p>
+        </div>
+        <button type="button" onClick={() => router.push("/clients/new")} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-4 text-sm font-semibold text-white hover:bg-[#0f4a34]">
+          <Plus className="size-4 shrink-0" aria-hidden="true" />
+          Pievienot
+        </button>
+      </div>
 
-      <form onSubmit={submit} className="mt-8 rounded-3xl border border-[#d3e4da] bg-white p-5 sm:p-6">
-        <h2 className="font-semibold">{editing ? "Labot klientu" : "Jauns klients"}</h2>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <section className="mt-8 overflow-hidden rounded-3xl border border-[#d3e4da] bg-white">
+        {sites.length === 0 ? (
+          <p className="px-6 py-14 text-center text-sm text-[#5f756a]">Klientu vēl nav.</p>
+        ) : (
+          <ul className="divide-y divide-[#e4efe8]">
+            {sites.map((site) => {
+              const mark = offerMarks[site.id];
+              const offerReady = Boolean(mark);
+              const offerLabel = offerButtonLabel(mark);
+              const needsReview = reviewSiteIds.includes(site.id);
+              return (
+                <li key={site.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-medium">{site.customer}</p>
+                    <p className="mt-1 text-sm text-[#5f756a]">{site.address}</p>
+                    <p className="mt-1 text-sm text-[#5f756a]">{site.iban || "Nav IBAN"}</p>
+                    {bankFromIban(site.iban)?.name ? <p className="text-sm text-[#5f756a]">{bankFromIban(site.iban)?.name}</p> : null}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {needsReview ? (
+                      <span className="mr-1 inline-flex items-center gap-1.5 rounded-full bg-[#fdeceb] px-2.5 py-1 text-xs font-semibold text-[#8a1c14]">
+                        <CircleAlert className="size-3.5 shrink-0" aria-hidden="true" />
+                        Cenas jāpārskata
+                      </span>
+                    ) : null}
+                    <Tooltip text="Labot">
+                      <button type="button" onClick={() => beginEdit(site)} className={iconButton} aria-label="Labot">
+                        <Pencil className="size-4" aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                    {offerReady ? null : (
+                      <Tooltip text="Kopēt piedāvājumu">
+                        <button type="button" onClick={() => setCopySite(site)} className={iconButton} aria-label="Kopēt piedāvājumu">
+                          <Copy className="size-4" aria-hidden="true" />
+                        </button>
+                      </Tooltip>
+                    )}
+                    <Tooltip text={offerLabel}>
+                      <button type="button" onClick={() => setOfferSite(site)} className={mark?.fixed ? tameButton : iconButton} aria-label={offerLabel}>
+                        {offerReady ? (mark?.fixed ? <FileCheck className="size-4" aria-hidden="true" /> : <FileText className="size-4" aria-hidden="true" />) : <FilePlus className="size-4" aria-hidden="true" />}
+                        {mark?.fixed && mark.extras > 0 ? (
+                          <span
+                            aria-hidden="true"
+                            className={`absolute -top-1 -right-1 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-white ${mark.openExtra ? "bg-[#b42318]" : "bg-[#1f8a4c]"}`}
+                          >
+                            {mark.extras}
+                          </span>
+                        ) : null}
+                      </button>
+                    </Tooltip>
+                    <Tooltip text="Dzēst">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmSite(site)}
+                        className={`${iconButton} text-[#b42318] hover:bg-[#fdeceb]`}
+                        aria-label="Dzēst"
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+      {creating || editing ? (
+        <RightDrawer
+          title={editing ? "Labot klientu" : "Jauns klients"}
+          hint=""
+          onClose={close}
+          onSubmit={submit}
+          footer={(dismiss) => (
+            <>
+              <button type="button" onClick={dismiss} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+                <X className="size-4 shrink-0" aria-hidden="true" />
+                Atcelt
+              </button>
+              <button
+                type="submit"
+                disabled={pendingId !== null || !complete || (editing ? !editDirty : false)}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+              >
+                {editing ? <Check className="size-4 shrink-0" aria-hidden="true" /> : <Plus className="size-4 shrink-0" aria-hidden="true" />}
+                {editing ? "Saglabāt" : "Pievienot"}
+              </button>
+            </>
+          )}
+        >
           <label className="block text-sm font-medium">
             Nosaukums
             <input
@@ -109,49 +269,32 @@ export function SitesView() {
             />
             {ibanHint(draft.iban)}
           </label>
-        </div>
-        <div className="mt-5 flex justify-end gap-2">
-          {editing ? (
-            <button type="button" onClick={cancelEdit} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
-              Atcelt
-            </button>
-          ) : null}
-          <button
-            type="submit"
-            disabled={pendingId !== null || !complete || (editing ? !editDirty : false)}
-            className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
-          >
-            {editing ? "Saglabāt" : "Pievienot"}
-          </button>
-        </div>
-      </form>
-
-      <section className="mt-4 overflow-hidden rounded-3xl border border-[#d3e4da] bg-white">
-        {sites.length === 0 ? (
-          <p className="px-6 py-14 text-center text-sm text-[#5f756a]">Klientu vēl nav.</p>
-        ) : (
-          <ul className="divide-y divide-[#e4efe8]">
-            {sites.map((site) => (
-              <li key={site.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="font-medium">{site.customer}</p>
-                  <p className="mt-1 text-sm text-[#5f756a]">{site.address}</p>
-                  <p className="mt-1 text-sm text-[#5f756a]">{site.iban || "Nav IBAN"}</p>
-                  {bankFromIban(site.iban)?.name ? <p className="text-sm text-[#5f756a]">{bankFromIban(site.iban)?.name}</p> : null}
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <button type="button" onClick={() => beginEdit(site)} className="h-10 rounded-xl px-3 text-sm font-semibold text-[#1a6b4a]">
-                    Labot
-                  </button>
-                  <button type="button" onClick={() => setConfirmSite(site)} className="h-10 rounded-xl px-3 text-sm font-semibold text-[#b42318]">
-                    Dzēst
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        </RightDrawer>
+      ) : null}
+      {offerSite ? (
+        <OfferEditor
+          site={offerSite}
+          onClose={() => {
+            setOfferSite(null);
+            void refreshOffers();
+          }}
+          onReady={() =>
+            setOfferMarks((current) =>
+              current[offerSite.id] ? current : { ...current, [offerSite.id]: { fixed: false, extras: 0, openExtra: false } },
+            )
+          }
+        />
+      ) : null}
+      {copySite ? (
+        <CopyOfferModal
+          sites={sites.filter((site) => site.id !== copySite.id && offerMarks[site.id])}
+          copyingId={copyingId}
+          onClose={() => {
+            if (!copyingId) setCopySite(null);
+          }}
+          onCopy={(sourceId) => void copyOffer(sourceId)}
+        />
+      ) : null}
       {confirmSite ? (
         <ConfirmModal
           title="Dzēst klientu?"
@@ -167,12 +310,88 @@ export function SitesView() {
   );
 }
 
+function CopyOfferModal({
+  sites,
+  copyingId,
+  onClose,
+  onCopy,
+}: {
+  sites: Site[];
+  copyingId: string | null;
+  onClose: () => void;
+  onCopy: (siteId: string) => void;
+}) {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape" && !copyingId) onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, copyingId]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] grid place-items-center bg-[#12382c]/35 p-4 backdrop-blur-md"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !copyingId) onClose();
+      }}
+    >
+      <div role="dialog" aria-modal="true" aria-labelledby="copy-offer-title" className="flex max-h-[min(32rem,calc(100vh-2rem))] w-full max-w-md flex-col rounded-3xl bg-white p-6 text-[#143028] shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <h2 id="copy-offer-title" className="text-lg font-semibold">Kopēt piedāvājumu</h2>
+          <button type="button" onClick={onClose} disabled={copyingId !== null} className="grid size-8 shrink-0 place-items-center rounded-lg text-[#5f756a] disabled:text-[#c5d8cc]" aria-label="Aizvērt">
+            <X className="size-4" aria-hidden="true" />
+          </button>
+        </div>
+        <p className="mt-2 text-sm text-[#5f756a]">Izvēlies klientu, kura piedāvājumu nokopēt. Pēc kopēšanas var pārskatīt cenu izmaiņas.</p>
+        {sites.length === 0 ? (
+          <p className="mt-5 text-sm text-[#5f756a]">Nevienam citam klientam vēl nav piedāvājuma.</p>
+        ) : (
+          <ul className="mt-5 min-h-0 flex-1 divide-y divide-[#e4efe8] overflow-y-auto rounded-2xl border border-[#d3e4da]">
+            {sites.map((site) => (
+              <li key={site.id}>
+                <button
+                  type="button"
+                  disabled={copyingId !== null}
+                  onClick={() => onCopy(site.id)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-[#f4faf6] disabled:text-[#8aa396]"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{site.customer}</span>
+                    {site.address ? <span className="mt-0.5 block truncate text-sm text-[#5f756a]">{site.address}</span> : null}
+                  </span>
+                  <Copy className="size-4 shrink-0 text-[#1a6b4a]" aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function ibanHint(value: string) {
   const iban = normalizeIban(value);
   if (iban === "") return null;
   if (!isValidIban(iban)) return <span className="mt-1 block text-xs font-normal text-[#b42318]">IBAN nav derīgs.</span>;
   const bank = bankFromIban(iban);
   return bank ? <span className="mt-1 block text-xs font-normal text-[#5f756a]">{bank.name}</span> : null;
+}
+
+const iconButton = "grid size-9 place-items-center rounded-xl text-[#1a6b4a] hover:bg-[#e7f6ec]";
+
+const tameButton = "relative grid size-9 place-items-center rounded-xl bg-[#143028] text-white hover:bg-[#0d241c]";
+
+type OfferMark = { fixed: boolean; extras: number; openExtra: boolean };
+
+function offerButtonLabel(mark: OfferMark | undefined) {
+  if (!mark) return "Izveidot piedāvājumu";
+  if (!mark.fixed) return "Apskatīt piedāvājumu";
+  if (mark.extras === 0) return "Apskatīt tāmi";
+  if (mark.openExtra) return "Apskatīt tāmi. Papildu darbu tāme nav nofiksēta.";
+  return "Apskatīt tāmi. Papildu darbu tāmes ir nofiksētas.";
 }
 
 const fieldClass =

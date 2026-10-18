@@ -4,7 +4,7 @@ import { DateField } from "@/app/components/date-field";
 import { InvoiceTable } from "@/app/components/invoice-table";
 import { useInvoices } from "@/app/components/invoice-state";
 import { duePhrase, formatDate, formatMoney, isOverdue, monthOf, shiftMonth, type Invoice, type MonthKey } from "@/app/lib/invoices/model";
-import { Search } from "lucide-react";
+import { ChevronLeft, Search } from "lucide-react";
 import { useState } from "react";
 
 export function ListView() {
@@ -38,8 +38,9 @@ export function ListView() {
             type="button"
             onClick={showPreviousMonth}
             disabled={searching}
-            className="mb-2 text-sm font-semibold text-[#1a6b4a] disabled:text-[#8aa396]"
+            className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-[#1a6b4a] disabled:text-[#8aa396]"
           >
+            <ChevronLeft className="size-4 shrink-0" aria-hidden="true" />
             Iepriekšējais mēnesis
           </button>
           <label className="text-sm font-medium">
@@ -81,7 +82,7 @@ function invoiceSearchText(invoice: Invoice, today: string) {
     invoice.client,
     invoice.supplier,
     invoice.objectName,
-    invoice.workName,
+    invoice.categoryName,
     invoice.fileName,
     invoice.subject,
     invoice.fromEmail,

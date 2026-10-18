@@ -3,7 +3,7 @@
 import { RightDrawer } from "@/app/components/right-drawer";
 import { StockAddModal, StockBreakdownModal, addStockLine, stockTotal, type StockLine } from "@/app/components/stock-modals";
 import { Tooltip } from "@/app/components/tooltip";
-import { Info } from "lucide-react";
+import { Info, Plus, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
@@ -51,8 +51,16 @@ export function WarehouseView() {
 
   return (
     <div className="animate-slide-up">
-      <h1 className="text-3xl font-semibold tracking-tight">Noliktava</h1>
-      <p className="mt-2 max-w-2xl text-sm text-[#5f756a]">Noliktavas preces, mērvienības un atlikums pa izmēriem.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Noliktava</h1>
+          <p className="mt-2 max-w-2xl text-sm text-[#5f756a]">Noliktavas preces, mērvienības un atlikums pa izmēriem.</p>
+        </div>
+        <button type="button" onClick={() => router.push("/warehouse/new")} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-4 text-sm font-semibold text-white hover:bg-[#0f4a34]">
+          <Plus className="size-4 shrink-0" aria-hidden="true" />
+          Pievienot
+        </button>
+      </div>
       <section className="mt-8 overflow-hidden rounded-3xl border border-[#d3e4da] bg-white">
         {rows.length === 0 ? (
           <p className="px-6 py-14 text-center text-sm text-[#5f756a]">Noliktavā vēl nekā nav.</p>
@@ -97,14 +105,16 @@ export function WarehouseView() {
           onSubmit={submit}
           footer={(dismiss) => (
             <>
-              <button type="button" onClick={dismiss} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+              <button type="button" onClick={dismiss} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+                <X className="size-4 shrink-0" aria-hidden="true" />
                 Atcelt
               </button>
               <button
                 type="submit"
                 disabled={!complete}
-                className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
               >
+                <Plus className="size-4 shrink-0" aria-hidden="true" />
                 Pievienot
               </button>
             </>

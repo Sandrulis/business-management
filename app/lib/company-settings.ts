@@ -20,6 +20,9 @@ export type CompanySettings = {
   mailboxEmail: string;
   mailboxPassword: string;
   mailboxes: Mailbox[];
+  offerHourlyRate: string;
+  offerValidDays: string;
+  offerNote: string;
 };
 
 export const defaultCompanySettings: CompanySettings = {
@@ -38,4 +41,7 @@ export const defaultCompanySettings: CompanySettings = {
   mailboxEmail: "",
   mailboxPassword: "",
   mailboxes: [],
+  offerHourlyRate: "",
+  offerValidDays: "",
+  offerNote: "",
 };

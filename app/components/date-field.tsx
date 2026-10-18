@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDate } from "@/app/lib/invoices/model";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Eraser } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -134,14 +134,16 @@ export function DateField({
                 })}
               </div>
               <div className="mt-2 flex justify-between">
-                <button type="button" className="h-8 rounded-lg px-2 text-sm font-semibold text-[#1a6b4a]" onClick={() => { onChange(""); setOpen(false); }}>
+                <button type="button" className="inline-flex h-8 items-center justify-center gap-2 rounded-lg px-2 text-sm font-semibold text-[#1a6b4a]" onClick={() => { onChange(""); setOpen(false); }}>
+                  <Eraser className="size-4 shrink-0" aria-hidden="true" />
                   Notīrīt
                 </button>
                 <button
                   type="button"
-                  className="h-8 rounded-lg px-2 text-sm font-semibold text-[#1a6b4a]"
+                  className="inline-flex h-8 items-center justify-center gap-2 rounded-lg px-2 text-sm font-semibold text-[#1a6b4a]"
                   onClick={() => pick(today.getFullYear(), today.getMonth() + 1, today.getDate())}
                 >
+                  <Calendar className="size-4 shrink-0" aria-hidden="true" />
                   Šodien
                 </button>
               </div>

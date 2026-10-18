@@ -129,7 +129,7 @@ function Amount({ invoice }: { invoice: Invoice }) {
     <div>
       <p className="font-semibold tabular-nums">{formatMoney(invoice.gross)}</p>
       <p className="mt-1 text-xs text-[#5f756a] tabular-nums">{formatMoney(invoice.net)} bez PVN</p>
-      {invoice.workName ? <p className="mt-1 text-xs text-[#5f756a]">{invoice.workName}</p> : null}
+      {invoice.categoryName ? <p className="mt-1 text-xs text-[#5f756a]">{invoice.categoryName}</p> : null}
     </div>
   );
 }

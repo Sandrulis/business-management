@@ -17,7 +17,7 @@ import { createLiveList } from "@/app/lib/catalog/live-list";
 import { deleteClothingAssignments, deleteClothingRecord, recordClothingAssignments, replaceClothingStocks, saveClothingRecord } from "@/app/lib/catalog/repository";
 import type { ClothingAssignment, ClothingItem, EmployeeOption } from "@/app/lib/catalog/types";
 import { formatDate, formatMoney, todayIso } from "@/app/lib/invoices/model";
-import { History, Info, Pencil, Trash2, UserPlus } from "lucide-react";
+import { Check, History, Info, Pencil, Plus, Trash2, UserPlus, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
@@ -164,8 +164,16 @@ export function ClothingView({
 
   return (
     <div className="animate-slide-up">
-      <h1 className="text-3xl font-semibold tracking-tight">Apģērbs</h1>
-      <p className="mt-2 max-w-2xl text-sm text-[#5f756a]">Darba apģērba nosaukums, vērtība, termiņš un atlikums.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Apģērbs</h1>
+          <p className="mt-2 max-w-2xl text-sm text-[#5f756a]">Darba apģērba nosaukums, vērtība, termiņš un atlikums.</p>
+        </div>
+        <button type="button" onClick={() => router.push("/clothing/new")} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-4 text-sm font-semibold text-white hover:bg-[#0f4a34]">
+          <Plus className="size-4 shrink-0" aria-hidden="true" />
+          Pievienot
+        </button>
+      </div>
       <section className="mt-8 overflow-hidden rounded-3xl border border-[#d3e4da] bg-white">
         {rows.length === 0 ? (
           <p className="px-6 py-14 text-center text-sm text-[#5f756a]">Apģērba vēl nav.</p>
@@ -232,14 +240,16 @@ export function ClothingView({
           onSubmit={submit}
           footer={(dismiss) => (
             <>
-              <button type="button" onClick={dismiss} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+              <button type="button" onClick={dismiss} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+                <X className="size-4 shrink-0" aria-hidden="true" />
                 Atcelt
               </button>
               <button
                 type="submit"
                 disabled={!complete || saving}
-                className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
               >
+                {editing ? <Check className="size-4 shrink-0" aria-hidden="true" /> : <Plus className="size-4 shrink-0" aria-hidden="true" />}
                 {editing ? "Saglabāt" : "Pievienot"}
               </button>
             </>
@@ -279,8 +289,8 @@ export function ClothingView({
       {assigning ? (
         <AssignModal item={assigning} employees={employeeOptions} onClose={() => setAssigning(null)} onAssign={(chosen) => assign(assigning, chosen)} />
       ) : null}
-      {adding ? <StockAddModal onClose={() => setAddingId(null)} onAdd={addStock} warnDuplicateSizes /> : null}
-      {breakdown ? <StockBreakdownModal lines={breakdown.stocks} onClose={() => setBreakdownId(null)} /> : null}
+      {adding ? <StockAddModal side onClose={() => setAddingId(null)} onAdd={addStock} warnDuplicateSizes /> : null}
+      {breakdown ? <StockBreakdownModal side lines={breakdown.stocks} onClose={() => setBreakdownId(null)} /> : null}
     </div>
   );
 }
@@ -403,14 +413,16 @@ function AssignModal({
         )}
         {error ? <p className="mt-3 text-sm text-[#b42318]">{error}</p> : null}
         <div className="mt-6 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+          <button type="button" onClick={onClose} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+            <X className="size-4 shrink-0" aria-hidden="true" />
             Atcelt
           </button>
           <button
             type="submit"
             disabled={chosen.length === 0}
-            className="h-11 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b4a] px-5 text-sm font-semibold text-white hover:bg-[#0f4a34] disabled:bg-[#c5d8cc] disabled:text-[#5f756a]"
           >
+            <UserPlus className="size-4 shrink-0" aria-hidden="true" />
             Piesaistīt
           </button>
         </div>
@@ -423,7 +435,17 @@ function HistoryModal({ item, onClose }: { item: ClothingItem; onClose: () => vo
   const now = Date.now();
   const groups = historyGroups(item.assignments ?? [], now);
   return (
-    <CenterDialog title="Vēsture" onClose={onClose}>
+    <RightDrawer
+      title="Vēsture"
+      hint={item.name}
+      onClose={onClose}
+      footer={(close) => (
+        <button type="button" onClick={close} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
+          <X className="size-4 shrink-0" aria-hidden="true" />
+          Aizvērt
+        </button>
+      )}
+    >
       {groups.length === 0 ? (
         <p className="text-sm text-[#5f756a]">Šim apģērbam vēl nav darbību.</p>
       ) : (
@@ -450,12 +472,7 @@ function HistoryModal({ item, onClose }: { item: ClothingItem; onClose: () => vo
           ))}
         </div>
       )}
-      <div className="mt-6 flex justify-end">
-        <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-sm font-semibold text-[#1e3a2f]">
-          Aizvērt
-        </button>
-      </div>
-    </CenterDialog>
+    </RightDrawer>
   );
 }
 

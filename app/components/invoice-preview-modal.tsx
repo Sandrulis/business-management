@@ -9,16 +9,18 @@ export function InvoicePreviewModal({
   name,
   mime,
   beside,
+  front = false,
   onClose,
 }: {
   src: string;
   name: string;
   mime: string;
   beside?: number;
+  front?: boolean;
   onClose: () => void;
 }) {
   return (
-    <RightDrawer wide beside={beside} title={name} hint="Rēķina fails" onClose={onClose}>
+    <RightDrawer wide beside={beside} front={front} title={name} hint="Rēķina fails" onClose={onClose}>
       <InvoiceFileView src={src} name={name} mime={mime} />
     </RightDrawer>
   );
